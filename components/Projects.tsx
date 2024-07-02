@@ -16,7 +16,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects }) => {
   );
 
   return (
-    <section className="py-20">
+    <section className="py-12 px-4  min-h-screen">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl font-bold mb-12 text-center">My Projects</h2>
         <div className="mb-8">
