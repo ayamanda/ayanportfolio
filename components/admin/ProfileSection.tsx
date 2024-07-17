@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useDropzone } from 'react-dropzone';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/firebase';
+import { doc, getDoc, updateDoc, DocumentData } from 'firebase/firestore';
+import { db } from '@/firebase';
 import { Profile } from '../../types';
 import { toast } from 'react-toastify';
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Label } from "@/components/ui/label"
+import { PhotoGallery } from './PhotoGallery';
 
 export const ProfileSection: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const { register, handleSubmit, setValue, watch } = useForm<Profile>();
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
 
   const photoURL = watch('photoURL');
 
@@ -41,14 +45,15 @@ export const ProfileSection: React.FC = () => {
 
   const onSubmit = async (data: Profile) => {
     try {
-      const profileData = {
-        name: data.name,
-        title: data.title,
-        about: data.about,
-        photoURL: data.photoURL
-      };
-      await setDoc(doc(db, 'profile', 'main'), profileData, { merge: true });
-      setProfile(profileData);
+      const docRef = doc(db, 'profile', 'main');
+      const updateData: DocumentData = {};
+      (Object.keys(data) as Array<keyof Profile>).forEach(key => {
+        if (data[key] !== undefined) {
+          updateData[key] = data[key];
+        }
+      });
+      await updateDoc(docRef, updateData);
+      setProfile(data);
       toast.success('Profile updated successfully!');
     } catch (error) {
       toast.error('Failed to update profile. Please try again.');
@@ -56,47 +61,62 @@ export const ProfileSection: React.FC = () => {
     }
   };
 
-  const onDrop = async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    const storageRef = ref(storage, `profile/${file.name}`);
-
+  const handlePhotoSelect = async (url: string) => {
     try {
-      setUploading(true);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      setValue('photoURL', downloadURL);
-      toast.success('Profile photo uploaded successfully!');
+      const docRef = doc(db, 'profile', 'main');
+      await updateDoc(docRef, { photoURL: url });
+      setValue('photoURL', url);
+      toast.success('Profile photo updated!');
     } catch (error) {
-      toast.error('Failed to upload profile photo. Please try again.');
-      console.error('File upload failed:', error);
-    } finally {
-      setUploading(false);
+      console.error('Failed to update profile photo:', error);
+      toast.error('Failed to update profile photo. Please try again.');
     }
   };
-
-  const { getRootProps, getInputProps } = useDropzone({ onDrop });
 
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Profile</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <input {...register('name')} placeholder="Name" className="w-full p-2 bg-gray-700 rounded" />
-        <input {...register('title')} placeholder="Title" className="w-full p-2 bg-gray-700 rounded" />
-        <textarea {...register('about')} placeholder="About" className="w-full p-2 bg-gray-700 rounded" rows={4} />
-        <div {...getRootProps()} className="border-2 border-dashed border-gray-600 p-4 rounded text-center cursor-pointer">
-          <input {...getInputProps()} />
-          <p>Drag & drop profile photo or click to select</p>
-        </div>
-        
-        {photoURL && (
-          <img src={photoURL} alt="Profile" className="w-32 h-32 rounded-full mx-auto object-cover" />
-        )}
-        <button type="submit" className="bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700" disabled={uploading}>
-          {uploading ? 'Uploading...' : 'Update Profile'}
-        </button>
-      </form>
-    </div>
+    <Card className="max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-3xl font-bold">Profile</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="flex flex-col items-center space-y-4">
+            <Avatar className="w-32 h-32">
+              <AvatarImage src={photoURL} alt="Profile" />
+              <AvatarFallback>{profile?.name?.charAt(0) || 'U'}</AvatarFallback>
+            </Avatar>
+            <PhotoGallery onPhotoSelect={handlePhotoSelect} currentPhotoURL={photoURL || ''} />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" {...register('name')} placeholder="Your Name" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" {...register('title')} placeholder="Your Professional Title" />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="tagline">Tagline</Label>
+            <Input id="tagline" {...register('tagline')} placeholder="Your Catchy Tagline" />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="about">About</Label>
+            <Textarea id="about" {...register('about')} placeholder="Tell us about yourself" rows={4} />
+          </div>
+          
+          <Button type="submit" className="w-full">
+            Update Profile
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };

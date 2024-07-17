@@ -51,7 +51,29 @@ const Contact: React.FC = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [location, setLocation] = useState('');
+  const [ipAddress, setIpAddress] = useState('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Get user's location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation(`${position.coords.latitude},${position.coords.longitude}`);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+
+    // Get user's IP address
+    fetch('https://api.ipify.org?format=json')
+      .then(response => response.json())
+      .then(data => setIpAddress(data.ip))
+      .catch(error => console.error("Error fetching IP:", error));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +86,8 @@ const Contact: React.FC = () => {
         name,
         email,
         message,
+        location,
+        ipAddress,
         timestamp: serverTimestamp()
       });
 
@@ -105,7 +129,7 @@ const Contact: React.FC = () => {
         <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
           <div className="p-8 space-y-6">
             <h2 className="text-3xl font-bold text-center text-white mb-2">Get in Touch</h2>
-            <p className="text-center text-white/80 mb-6">We'd love to hear from you. Send us a message!</p>
+            <p className="text-center text-white/80 mb-6">We&apos;d love to hear from you. Send us a message!</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />

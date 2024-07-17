@@ -6,14 +6,31 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Ayan's Portfolio",
-  description: "A piece of creativity showcasing my projects and skills",
-  keywords: "portfolio, web development, projects, skills",
+  description: "A creative showcase of my projects and skills in web development",
+  keywords: "portfolio, web development, projects, skills, Ayan",
+  authors: [{ name: "Ayan" }],
   openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://ayan-portfolio.com",
     title: "Ayan's Portfolio",
-    description: "A piece of creativity showcasing my projects and skills",
-    images: ['/og-image.jpg'],
+    description: "A creative showcase of my projects and skills in web development",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Ayan's Portfolio",
+      },
+    ],
+    siteName: "Ayan's Portfolio",
   },
-};
+  twitter: {
+    card: "summary_large_image",
+    site: "@ayan_handle",
+    creator: "@ayan_handle",
+  },
+}
 
 export default function RootLayout({
   children,

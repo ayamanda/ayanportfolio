@@ -5,7 +5,12 @@ import { Code, Briefcase, Clock, ExternalLink, ChevronLeft, ChevronRight, Award,
 import { createApi } from 'unsplash-js';
 import { Project } from '../types';
 import { TextGenerateEffect } from './ui/text-generate-effect';
-import GlassCard from './Glasscard';
+import GlassCard from './GlassCard';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/firebase';
 
 // Unsplash API setup
 const unsplashApi = createApi({
@@ -126,25 +131,48 @@ const Home: React.FC<HomeProps> = ({
   name,
   about,
   skills,
-  featuredProject,
   numberOfProjects,
   experienceYears,
 }) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [featuredProject, setFeaturedProject] = useState<Project | null>(null);
+  
+
+  useEffect(() => {
+    const fetchFeaturedProject = async () => {
+      try {
+        const featuredQuery = query(collection(db, 'projects'), where('isFeatured', '==', true));
+        const featuredSnapshot = await getDocs(featuredQuery);
+        if (!featuredSnapshot.empty) {
+          const featuredDoc = featuredSnapshot.docs[0];
+          setFeaturedProject({ id: featuredDoc.id, ...featuredDoc.data() } as Project);
+        }
+      } catch (error) {
+        console.error('Failed to fetch featured project:', error);
+      }
+    };
+
+    fetchFeaturedProject();
+  }, []);
+
+  const truncateDescription = (html: string, maxLength: number) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const text = div.textContent || div.innerText || '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
   return (
-    <section className="py-12 px-4  min-h-screen">
+    <section className="py-12 px-4 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <GlassCard className="lg:col-span-2" gradient="from-blue-500/10 to-purple-600/10">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-              Hi, I'm <GradientText>{name}</GradientText>
+              Hi, I&apos;m <GradientText>{name}</GradientText>
             </h2>
-            <p id='about'
-              className="text-2xl leading-snug tracking-wide" 
-            >
+            <p id='about' className="text-2xl leading-snug tracking-wide">
               <TextGenerateEffect words={about} />
             </p>
-
-
           </GlassCard>
 
           <GlassCard gradient="from-indigo-500/10 to-purple-600/10">
@@ -158,12 +186,12 @@ const Home: React.FC<HomeProps> = ({
             </div>
           </GlassCard>
 
-          <GlassCard className="md:col-span-2" gradient="from-purple-500/10 to-pink-600/10">
+                    <GlassCard className="md:col-span-2" gradient="from-purple-500/10 to-pink-600/10">
             <h3 className="text-xl font-bold mb-4 text-white">
               <GradientText>Featured Project</GradientText>
             </h3>
             {featuredProject ? (
-              <div className="flex items-center space-x-6">
+              <div className="flex items-start space-x-6">
                 <div className="relative w-24 h-24 flex-shrink-0">
                   <Image
                     src={featuredProject.coverPhoto || '/placeholder-image.jpg'}
@@ -175,17 +203,31 @@ const Home: React.FC<HomeProps> = ({
                 </div>
                 <div>
                   <h4 className="text-lg font-semibold mb-2 text-white">{featuredProject.name}</h4>
-                  <p className="text-gray-300 text-sm mb-3">{featuredProject.description}</p>
-                  <motion.a
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    href={featuredProject.buttonLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center bg-purple-700/50 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-purple-800/50 transition-colors backdrop-blur-sm"
-                  >
-                    View Project <ExternalLink size={16} className="ml-2" />
-                  </motion.a>
+                  <div 
+                    className="text-gray-300 text-sm mb-3"
+                    dangerouslySetInnerHTML={{ __html: truncateDescription(featuredProject.description, 150) }}
+                  />
+                  <div className="flex items-center space-x-4">
+                    <motion.a
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      href={featuredProject.buttonLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center bg-purple-700/50 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-purple-800/50 transition-colors backdrop-blur-sm"
+                    >
+                      {featuredProject.buttonType === 'download' ? 'Download' : 'View'} Project <ExternalLink size={16} className="ml-2" />
+                    </motion.a>
+                    {featuredProject.description.length > 150 && (
+                      <Button
+                        variant="link"
+                        onClick={() => setIsDialogOpen(true)}
+                        className="p-0 h-auto font-normal text-blue-400 hover:text-blue-300"
+                      >
+                        Read More
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -231,6 +273,22 @@ const Home: React.FC<HomeProps> = ({
           </GlassCard>
         </div>
       </div>
+
+      {featuredProject && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="bg-gray-800 text-white border-gray-700 max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{featuredProject.name}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="h-[60vh]">
+              <div 
+                className="text-gray-300"
+                dangerouslySetInnerHTML={{ __html: featuredProject.description }}
+              />
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </section>
   );
 };

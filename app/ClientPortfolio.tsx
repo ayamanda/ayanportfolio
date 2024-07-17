@@ -34,6 +34,9 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
+  const x = useTransform(mouseX, [0, window.innerWidth], [0, 100]);
+  const y = useTransform(mouseY, [0, window.innerHeight], [0, 100]);
+
   useEffect(() => {
     setTimeout(() => setLoading(false), 1500);
 
@@ -140,36 +143,31 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
       )}
 
       {/* Floating elements */}
-      {floatingElements.map((item, index) => {
-        const x = useTransform(mouseX, [0, window.innerWidth], [0, 100]);
-        const y = useTransform(mouseY, [0, window.innerHeight], [0, 100]);
-
-        return (
-          <motion.div
-            key={index}
-            className="fixed text-2xl text-purple-300 opacity-20 pointer-events-none font-mono"
-            initial={{ 
-              x: Math.random() * window.innerWidth, 
-              y: Math.random() * window.innerHeight,
-              scale: 0,
-              rotate: Math.random() * 360 
-            }}
-            animate={{ 
-              scale: 1,
-              rotate: Math.random() * 360 
-            }}
-            transition={{ 
-              duration: 20, 
-              repeat: Infinity, 
-              repeatType: 'reverse',
-              delay: index * 0.2
-            }}
-            style={{ x, y }}
-          >
-            {item}
-          </motion.div>
-        );
-      })}
+      {floatingElements.map((item, index) => (
+        <motion.div
+          key={index}
+          className="fixed text-2xl text-purple-300 opacity-20 pointer-events-none font-mono"
+          initial={{ 
+            x: Math.random() * window.innerWidth, 
+            y: Math.random() * window.innerHeight,
+            scale: 0,
+            rotate: Math.random() * 360 
+          }}
+          animate={{ 
+            scale: 1,
+            rotate: Math.random() * 360 
+          }}
+          transition={{ 
+            duration: 20, 
+            repeat: Infinity, 
+            repeatType: 'reverse',
+            delay: index * 0.2
+          }}
+          style={{ x, y }}
+        >
+          {item}
+        </motion.div>
+      ))}
     </div>
   );
 };

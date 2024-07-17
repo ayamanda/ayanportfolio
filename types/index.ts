@@ -9,6 +9,7 @@ export interface Profile {
 }
 
 export interface Project {
+  isFeatured: boolean;
   buttonLink: string;
   link: string | undefined;
   id: string;

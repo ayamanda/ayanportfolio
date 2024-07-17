@@ -36,7 +36,11 @@ const Projects: React.FC<ProjectsProps> = ({ projects }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <ProjectCard project={project} />
+              <ProjectCard project={project} onEdit={function (): void {
+                throw new Error('Function not implemented.');
+              } } onDelete={function (): void {
+                throw new Error('Function not implemented.');
+              } } />
             </motion.div>
           ))}
         </div>
