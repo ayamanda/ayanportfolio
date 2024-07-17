@@ -48,7 +48,6 @@
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.166.0",
     "three-globe": "^2.31.1",
-    "tsparticles": "^3.5.0",
     "unsplash-js": "^7.0.19"
   },
   "devDependencies": {
