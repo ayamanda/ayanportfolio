@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Profile, Project, Skill } from '../types';
 import Header from '@/components/Header';
@@ -34,33 +34,48 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  const x = useTransform(mouseX, [0, window.innerWidth], [0, 100]);
-  const y = useTransform(mouseY, [0, window.innerHeight], [0, 100]);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+  const x = useTransform(mouseX, [0, windowSize.width], [0, 100]);
+  const y = useTransform(mouseY, [0, windowSize.height], [0, 100]);
+
+  const handleScroll = useCallback(() => {
+    if (headerRef.current && navRef.current) {
+      const headerBottom = headerRef.current.offsetTop + headerRef.current.offsetHeight;
+      const scrollPosition = window.scrollY;
+      setIsNavSticky(scrollPosition > headerBottom);
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    mouseX.set(e.clientX);
+    mouseY.set(e.clientY);
+  }, [mouseX, mouseY]);
+
+  const handleResize = useCallback(() => {
+    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+  }, []);
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 1500);
+    // Set initial window size
+    handleResize();
 
-    const handleScroll = () => {
-      if (headerRef.current && navRef.current) {
-        const headerBottom = headerRef.current.offsetTop + headerRef.current.offsetHeight;
-        const scrollPosition = window.scrollY;
-        setIsNavSticky(scrollPosition > headerBottom);
-      }
-    };
+    // Set loading to false after a delay
+    const timer = setTimeout(() => setLoading(false), 1500);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
-    };
-
+    // Add event listeners
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('resize', handleResize);
 
+    // Remove event listeners on cleanup
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
     };
-  }, [mouseX, mouseY]);
+  }, [handleScroll, handleMouseMove, handleResize]);
 
   if (!profile) {
     return <div>Error: Profile data not found. Please check your database.</div>;
@@ -148,8 +163,8 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
           key={index}
           className="fixed text-2xl text-purple-300 opacity-20 pointer-events-none font-mono"
           initial={{ 
-            x: Math.random() * window.innerWidth, 
-            y: Math.random() * window.innerHeight,
+            x: Math.random() * windowSize.width, 
+            y: Math.random() * windowSize.height,
             scale: 0,
             rotate: Math.random() * 360 
           }}
