@@ -1,41 +1,54 @@
+import { GetServerSideProps } from 'next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase';
 import ClientPortfolio from './ClientPortfolio';
 import { Profile, Project, Skill } from '../types';
 
-async function getData() {
-    try {
-        const profileSnapshot = await getDocs(collection(db, 'profile'));
-        const projectsSnapshot = await getDocs(collection(db, 'projects'));
-        const skillsSnapshot = await getDocs(collection(db, 'skills'));
-
-        let profile: Profile | null = null;
-        if (!profileSnapshot.empty) {
-            profile = profileSnapshot.docs[0].data() as Profile;
-        } else {
-            console.error('No profile document found in Firestore');
-        }
-
-        const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-        const skills = skillsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Skill));
-
-        return {
-            profile,
-            projects,
-            skills,
-        };
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        return { profile: null, projects: [], skills: [] };
-    }
+interface ServerSideProps {
+  profile: Profile | null;
+  projects: Project[];
+  skills: Skill[];
 }
 
-export default async function Portfolio() {
-    const data = await getData();
-    
-    if (!data.profile) {
-        return <div>Error: Profile data not found. Please check your database.</div>;
+async function getData(): Promise<ServerSideProps> {
+  try {
+    const profileSnapshot = await getDocs(collection(db, 'profile'));
+    const projectsSnapshot = await getDocs(collection(db, 'projects'));
+    const skillsSnapshot = await getDocs(collection(db, 'skills'));
+
+    let profile: Profile | null = null;
+    if (!profileSnapshot.empty) {
+      profile = profileSnapshot.docs[0].data() as Profile;
+    } else {
+      console.error('No profile document found in Firestore');
     }
-    
-    return <ClientPortfolio {...data} />;
+
+    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+    const skills = skillsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Skill));
+
+    return {
+      profile,
+      projects,
+      skills,
+    };
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return { profile: null, projects: [], skills: [] };
+  }
+}
+
+export const getServerSideProps: GetServerSideProps<ServerSideProps> = async () => {
+  const data = await getData();
+  
+  return {
+    props: data
+  };
+};
+
+export default function Portfolio({ profile, projects, skills }: ServerSideProps) {
+  if (!profile) {
+    return <div>Error: Profile data not found. Please check your database.</div>;
+  }
+  
+  return <ClientPortfolio profile={profile} projects={projects} skills={skills} />;
 }

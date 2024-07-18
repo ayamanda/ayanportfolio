@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Profile, Project, Skill } from '../types';
 import Header from '@/components/Header';
@@ -81,7 +81,7 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
     return <div>Error: Profile data not found. Please check your database.</div>;
   }
 
-  const featuredProject = projects[0];
+  const featuredProject = useMemo(() => projects[0], [projects]);
 
   const floatingElements = ['&lt;/', '{}', '[]', '//', '( )', '// TODO', '&lt;div&gt;', '&lt;/div&gt;'];
 

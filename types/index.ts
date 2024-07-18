@@ -1,6 +1,9 @@
 import { ReactNode } from "react";
 
 export interface Profile {
+  [x: string]: string | undefined;
+  twitterURL: string | undefined;
+  linkedinURL: string | undefined;
   tagline: ReactNode;
   name: string;
   title: string;

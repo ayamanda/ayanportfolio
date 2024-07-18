@@ -12,12 +12,12 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://ayan-portfolio.com",
+    url: "https://ayanm.pages.dev",
     title: "Ayan's Portfolio",
     description: "A creative showcase of my projects and skills in web development",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/logo.svg",
         width: 1200,
         height: 630,
         alt: "Ayan's Portfolio",
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@ayan_handle",
-    creator: "@ayan_handle",
+    site: "@AyanMandal824",
+    images: "logo.svg",
   },
 }
 
