@@ -5,6 +5,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase';
 import ClientPortfolio from './ClientPortfolio';
 import { Profile, Project, Skill } from '../types';
+import Loader from '@/components/Loader';
 
 function usePortfolioData() {
   const [data, setData] = useState<{ profile: Profile | null, projects: Project[], skills: Skill[] }>({
@@ -51,7 +52,7 @@ export default function Portfolio() {
   const { data, loading, error } = usePortfolioData();
   
   if (loading) {
-    return <div>Loading...</div>;
+    return <Loader/>;
   }
 
   if (error) {
