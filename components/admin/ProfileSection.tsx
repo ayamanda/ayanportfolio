@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { doc, getDoc, updateDoc, DocumentData } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Profile } from '../../types';
 import { toast } from 'react-toastify';
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,6 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { PhotoGallery } from './PhotoGallery';
+
+// Define the Profile type
+interface Profile {
+  name: string;
+  title: string;
+  about: string;
+  photoURL: string;
+  linkedinURL?: string;
+  twitterURL?: string;
+  instagramURL?: string;
+}
 
 export const ProfileSection: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -46,13 +56,13 @@ export const ProfileSection: React.FC = () => {
   const onSubmit = async (data: Profile) => {
     try {
       const docRef = doc(db, 'profile', 'main');
-      const updateData: DocumentData = {};
+      const updateData: Partial<Profile> = {};
       (Object.keys(data) as Array<keyof Profile>).forEach(key => {
-        if (data[key] !== undefined) {
+        if (data[key] !== undefined && data[key] !== null) {
           updateData[key] = data[key];
         }
       });
-      await updateDoc(docRef, updateData);
+      await updateDoc(docRef, updateData as DocumentData);
       setProfile(data);
       toast.success('Profile updated successfully!');
     } catch (error) {
@@ -66,6 +76,7 @@ export const ProfileSection: React.FC = () => {
       const docRef = doc(db, 'profile', 'main');
       await updateDoc(docRef, { photoURL: url });
       setValue('photoURL', url);
+      setProfile(prev => prev ? { ...prev, photoURL: url } : null);
       toast.success('Profile photo updated!');
     } catch (error) {
       console.error('Failed to update profile photo:', error);
@@ -102,14 +113,25 @@ export const ProfileSection: React.FC = () => {
             </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="tagline">Tagline</Label>
-            <Input id="tagline" {...register('tagline')} placeholder="Your Catchy Tagline" />
-          </div>
           
           <div className="space-y-2">
             <Label htmlFor="about">About</Label>
             <Textarea id="about" {...register('about')} placeholder="Tell us about yourself" rows={4} />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="linkedinURL">LinkedIn URL</Label>
+            <Input id="linkedinURL" {...register('linkedinURL')} placeholder="https://www.linkedin.com/in/yourprofile" />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="twitterURL">Twitter URL</Label>
+            <Input id="twitterURL" {...register('twitterURL')} placeholder="https://twitter.com/yourhandle" />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="instagramURL">Instagram URL</Label>
+            <Input id="instagramURL" {...register('instagramURL')} placeholder="https://www.instagram.com/yourhandle" />
           </div>
           
           <Button type="submit" className="w-full">

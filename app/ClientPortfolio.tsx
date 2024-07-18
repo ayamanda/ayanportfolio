@@ -39,6 +39,8 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
   const x = useTransform(mouseX, [0, windowSize.width], [0, 100]);
   const y = useTransform(mouseY, [0, windowSize.height], [0, 100]);
 
+  const featuredProject = useMemo(() => projects[0] || null, [projects]);
+
   const handleScroll = useCallback(() => {
     if (headerRef.current && navRef.current) {
       const headerBottom = headerRef.current.offsetTop + headerRef.current.offsetHeight;
@@ -57,18 +59,11 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
   }, []);
 
   useEffect(() => {
-    // Set initial window size
     handleResize();
-
-    // Set loading to false after a delay
     const timer = setTimeout(() => setLoading(false), 1500);
-
-    // Add event listeners
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('resize', handleResize);
-
-    // Remove event listeners on cleanup
     return () => {
       clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
@@ -80,8 +75,6 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
   if (!profile) {
     return <div>Error: Profile data not found. Please check your database.</div>;
   }
-
-  const featuredProject = useMemo(() => projects[0], [projects]);
 
   const floatingElements = ['&lt;/', '{}', '[]', '//', '( )', '// TODO', '&lt;div&gt;', '&lt;/div&gt;'];
 
@@ -157,7 +150,6 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
         </div>
       )}
 
-      {/* Floating elements */}
       {floatingElements.map((item, index) => (
         <motion.div
           key={index}
