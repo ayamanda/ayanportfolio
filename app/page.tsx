@@ -39,3 +39,6 @@ export default async function Portfolio() {
   
   return <ClientPortfolio profile={profile} projects={projects} skills={skills} />;
 }
+
+// Enable Incremental Static Regeneration
+export const revalidate = 60; // Revalidate every 60 seconds
