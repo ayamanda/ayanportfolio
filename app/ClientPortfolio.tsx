@@ -76,10 +76,61 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
     return <div>Error: Profile data not found. Please check your database.</div>;
   }
 
+  const socialLinks = {
+    twitter: profile.twitterURL,
+    linkedin: profile.linkedinURL,
+    instagram: profile.instagramURL,
+  };
+
   const floatingElements = ['&lt;/', '{}', '[]', '//', '( )', '// TODO', '&lt;div&gt;', '&lt;/div&gt;'];
 
-  return (
+   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 overflow-x-hidden">
+      <style jsx global>{`
+        /* Hide default scrollbar */
+        ::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Custom scrollbar styles */
+        .custom-scrollbar {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 8px;
+          height: 100%;
+          background-color: rgba(255, 255, 255, 0.1);
+          z-index: 1000;
+        }
+        
+        .scrollbar-thumb {
+          width: 100%;
+          background-color: rgba(255, 255, 255, 0.5);
+          border-radius: 4px;
+          transition: background-color 0.3s ease;
+        }
+        
+        .scrollbar-thumb:hover {
+          background-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* For Firefox */
+        * {
+          scrollbar-width: none;
+        }
+      `}</style>
+
+      {/* Custom scrollbar */}
+      <motion.div className="custom-scrollbar">
+        <motion.div 
+          className="scrollbar-thumb"
+          style={{ 
+            height: scrollYProgress,
+            scaleY: scaleX
+          }}
+        />
+      </motion.div>
+
       <div className="fixed inset-0 bg-[url('/path-to-your-background-image.jpg')] bg-cover bg-center opacity-10 z-0"></div>
       
       <motion.div
@@ -97,7 +148,12 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <Header name={profile.name} title={profile.title} photoURL={profile.photoURL} />
+            <Header 
+              name={profile.name} 
+              title={profile.title} 
+              photoURL={profile.photoURL} 
+              socialLinks={socialLinks}
+            />
           </motion.div>
           
           <motion.div 

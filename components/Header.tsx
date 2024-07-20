@@ -1,15 +1,26 @@
 import React from 'react';
 import Image from 'next/image';
-import { Linkedin, Dribbble, Twitter, Instagram, Code, Sparkles } from 'lucide-react';
+import { Linkedin, Twitter, Instagram } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface HeaderProps {
   name: string;
   title: string;
   photoURL: string;
+  socialLinks: {
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+  };
 }
 
-const Header: React.FC<HeaderProps> = ({ name, title, photoURL }) => {
+const Header: React.FC<HeaderProps> = ({ name, title, photoURL, socialLinks }) => {
+  const socialIcons = [
+    { Icon: Twitter, link: socialLinks.twitter },
+    { Icon: Linkedin, link: socialLinks.linkedin },
+    { Icon: Instagram, link: socialLinks.instagram },
+  ];
+
   return (
     <header className="h-screen flex flex-col justify-center items-center relative overflow-hidden">
       <motion.div
@@ -64,43 +75,62 @@ const Header: React.FC<HeaderProps> = ({ name, title, photoURL }) => {
         transition={{ delay: 0.5 }}
         className="flex space-x-6 z-10"
       >
-        {[Linkedin, Dribbble, Twitter, Instagram].map((Icon, index) => (
-          <motion.a
-            key={index}
-            href="#"
-            className="text-white hover:text-indigo-300 transition-colors"
-            whileHover={{ scale: 1.2, rotate: 5 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <Icon size={32} />
-          </motion.a>
+        {socialIcons.map(({ Icon, link }, index) => (
+          link && (
+            <motion.a
+              key={index}
+              href={link}
+              className="text-white hover:text-indigo-300 transition-colors"
+              whileHover={{ scale: 1.2, rotate: 5 }}
+              whileTap={{ scale: 0.9 }}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Icon size={32} />
+            </motion.a>
+          )
         ))}
       </motion.div>
       
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
-        className="mt-12 flex space-x-6"
-      >
-      </motion.div>
-      
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
         transition={{ delay: 0.9 }}
-        className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
       >
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="text-white text-lg font-semibold"
+        <motion.svg 
+          width="24" 
+          height="36" 
+          viewBox="0 0 24 36" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          className="text-white opacity-70"
         >
-          Scroll Down to Explore
-        </motion.div>
+          <motion.rect
+            x="1"
+            y="1"
+            width="22"
+            height="34"
+            rx="11"
+            stroke="currentColor"
+            strokeWidth="2"
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+          <motion.circle
+            cx="12"
+            cy="12"
+            r="3"
+            fill="currentColor"
+            initial={{ y: 0 }}
+            animate={{ y: 16 }}
+            transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+          />
+        </motion.svg>
       </motion.div>
 
-      {/* Floating elements */}
+
       {['</', '{}', '[]', '//'].map((item, index) => (
         <motion.div
           key={index}

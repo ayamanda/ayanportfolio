@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Briefcase, Code, MessageSquare, LogOut, Sun, Moon, Menu, ChevronRight, Bell } from 'lucide-react';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { ProfileSection } from './ProfileSection';
-import { ProjectsSection } from './ProjectsSection';
+import { ProjectsSection } from './ProjectSection/ProjectsSection';
 import { SkillsSection } from './SkillsSection';
 import { MessagesSection } from './MessagesSection';
 import { Button } from "@/components/ui/button"

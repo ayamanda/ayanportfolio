@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Trash2, Filter, Search, ExternalLink, ChevronLeft, ChevronRight, MapPin, Calendar, Clock, ArrowUpDown } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import Loader from '../Loader';
 
 interface Message {
   id: string;
@@ -173,7 +174,9 @@ export const MessagesSection: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading messages...</div>;
+    return <div className="flex justify-center items-center h-64">
+      <Loader/>
+      Loading messages...</div>;
   }
 
   return (

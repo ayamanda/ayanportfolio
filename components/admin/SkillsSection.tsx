@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { X, Plus } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { X, Plus, Loader2 } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast"
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const SkillsSection: React.FC = () => {
   const [skills, setSkills] = useState<Skill[]>([]);
   const { register, handleSubmit, reset } = useForm<{ name: string }>();
   const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchSkills();
@@ -28,21 +30,35 @@ export const SkillsSection: React.FC = () => {
       setSkills(skillsData);
     } catch (error) {
       console.error('Failed to fetch skills:', error);
-      toast.error('Failed to fetch skills. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to fetch skills. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const onSubmit = async (data: { name: string }) => {
+    setAdding(true);
     try {
       await addDoc(collection(db, 'skills'), data);
-      toast.success('Skill added successfully!');
+      toast({
+        title: "Success",
+        description: "Skill added successfully!",
+      });
       reset();
       fetchSkills();
     } catch (error) {
       console.error('Skill addition failed:', error);
-      toast.error('Failed to add skill. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to add skill. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -50,11 +66,18 @@ export const SkillsSection: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this skill?')) {
       try {
         await deleteDoc(doc(db, 'skills', id));
-        toast.success('Skill deleted successfully!');
+        toast({
+          title: "Success",
+          description: "Skill deleted successfully!",
+        });
         setSkills(skills.filter(skill => skill.id !== id));
       } catch (error) {
         console.error('Skill deletion failed:', error);
-        toast.error('Failed to delete skill. Please try again.');
+        toast({
+          title: "Error",
+          description: "Failed to delete skill. Please try again.",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -64,7 +87,7 @@ export const SkillsSection: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.5 }}
     >
       <Card>
         <CardHeader>
@@ -75,16 +98,22 @@ export const SkillsSection: React.FC = () => {
             <div className="flex space-x-2">
               <Input {...register('name')} placeholder="Skill Name" className="flex-grow" />
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button type="submit">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Skill
+                <Button type="submit" disabled={adding}>
+                  {adding ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  {adding ? 'Adding...' : 'Add Skill'}
                 </Button>
               </motion.div>
             </div>
           </form>
 
           {loading ? (
-            <div className="text-center">Loading skills...</div>
+            <div className="flex justify-center items-center h-32">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
           ) : (
             <motion.div 
               className="flex flex-wrap gap-2"
@@ -107,7 +136,7 @@ export const SkillsSection: React.FC = () => {
                     layout
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
+                    exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
                     transition={{ duration: 0.3 }}
                   >
                     <Badge 
