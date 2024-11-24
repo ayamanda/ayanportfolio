@@ -28,3 +28,30 @@ export interface Skill {
   id: string;
   name: string;
 }
+
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  feedback?: Feedback;
+}
+
+export interface Feedback {
+  helpful: boolean;
+  timestamp: number;
+  messageId: string;
+}
+
+export interface ChatSession {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  userEmail?: string;
+  messages: Message[];
+  deviceInfo: {
+    userAgent: string;
+    platform: string;
+    screenSize: string;
+  };
+}

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Project } from '../types';
 import ProjectCard from './ProjectCard';
+import { useSearchParams } from 'next/navigation';
 
 interface ProjectsProps {
   projects: Project[];
@@ -9,6 +10,14 @@ interface ProjectsProps {
 
 const Projects: React.FC<ProjectsProps> = ({ projects }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const projectParam = searchParams.get('project');
+    if (projectParam) {
+      setSearchTerm(projectParam);
+    }
+  }, [searchParams]);
 
   const filteredProjects = projects.filter(project =>
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

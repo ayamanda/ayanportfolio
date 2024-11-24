@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import Home from '@/components/Home';
 import Projects from '@/components/Projects';
 import Contact from '@/components/Contact';
+import Chatbot from '@/components/Chatbot';
 import { motion, useScroll, useSpring, useMotionValue, useTransform } from 'framer-motion';
 
 const Loader = dynamic(() => import('../components/Loader'), { ssr: false });
@@ -85,6 +86,7 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
   const floatingElements = ['&lt;/', '{}', '[]', '//', '( )', '// TODO', '&lt;div&gt;', '&lt;/div&gt;'];
 
    return (
+    
     <div className="min-h-screen bg-gray-900 text-gray-100 overflow-x-hidden">
       <style jsx global>{`
         /* Hide default scrollbar */
@@ -231,6 +233,7 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
           {item}
         </motion.div>
       ))}
+      <Chatbot profile={profile} projects={projects} skills={skills} />
     </div>
   );
 };
