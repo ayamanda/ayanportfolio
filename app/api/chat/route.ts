@@ -1,4 +1,5 @@
 // app/api/chat/route.ts
+export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
