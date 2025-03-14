@@ -5,6 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ayanm.vercel.app"),
   title: "Ayan's Portfolio",
   description: "A creative showcase of my projects and skills in web development",
   keywords: "portfolio, web development, projects, skills, Ayan",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -10,7 +10,7 @@ import Loader from '@/components/Loader';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-export default function ProjectsPage() {
+function ProjectsContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,5 +107,13 @@ export default function ProjectsPage() {
         )}
       </div>
     </section>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <ProjectsContent />
+    </Suspense>
   );
 }
