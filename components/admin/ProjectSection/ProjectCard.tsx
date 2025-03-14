@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowDownToLine, Link } from 'lucide-react';
+import Image from 'next/image';
 
 interface ProjectCardProps {
     project: Project;
@@ -34,7 +35,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         <Card className="bg-gray-800 text-white border-gray-700">
             <CardHeader>
                 {project.coverPhoto && (
-                    <img src={project.coverPhoto} alt={project.name} className="w-full h-40 object-cover rounded-t-lg" />
+                    <Image src={project.coverPhoto} alt={project.name} className="w-full h-40 object-cover rounded-t-lg" />
                 )}
                 <CardTitle className="flex items-center justify-between">
                     <span className="flex items-center space-x-2">

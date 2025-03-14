@@ -22,6 +22,8 @@ interface Profile {
   linkedinURL?: string;
   twitterURL?: string;
   instagramURL?: string;
+  githubURL?: string;  // Add this line
+  email?: string;      // Add this line
 }
 
 export const ProfileSection: React.FC = () => {
@@ -169,6 +171,21 @@ export const ProfileSection: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="instagramURL">Instagram URL</Label>
               <Input id="instagramURL" {...register('instagramURL')} placeholder="https://www.instagram.com/yourhandle" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="githubURL">GitHub URL</Label>
+              <Input id="githubURL" {...register('githubURL')} placeholder="https://github.com/yourusername" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                {...register('email')} 
+                placeholder="you@example.com" 
+              />
             </div>
             
             <motion.div

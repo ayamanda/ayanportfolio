@@ -11,22 +11,25 @@ export interface Profile {
 }
 
 export interface Project {
-  isFeatured: boolean;
-  buttonLink: string;
-  link: string | undefined;
   id: string;
   name: string;
   description: string;
-  icon: string;
-  color: string;
+  slug?: string;
   coverPhoto: string;
-  buttonType: 'download' | 'redirect';
+  buttonLink?: string;
+  buttonType?: string;
+  icon?: string;
+  color?: string;
+  tags?: string[];
+  date?: any;
+  isFeatured?: boolean;
+  link?: string;
 }
 
 export interface Skill {
-  level: any;
   id: string;
   name: string;
+  level?: any;
 }
 
 export interface Message {

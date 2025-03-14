@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Check } from 'lucide-react';
+import Image from 'next/image';
 import { useDropzone } from 'react-dropzone';
 import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 import { storage } from '@/firebase';
@@ -81,7 +82,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {photos.map((photo, index) => (
             <div key={index} className="relative group">
-              <img
+              <Image
                 src={photo}
                 alt={`Profile photo ${index + 1}`}
                 className="w-full h-32 object-cover rounded-lg transition-all duration-300 group-hover:opacity-75"

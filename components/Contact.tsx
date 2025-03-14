@@ -1,78 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useAnimation } from "framer-motion";
-import { Loader2, Send, User, Mail, MessageSquare, Star, Heart, Zap, Sparkles } from "lucide-react";
+import React, { useState } from 'react';
+import { motion } from "framer-motion";
+import { Loader2, Send, User, Mail, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { getDatabase, ref, push, serverTimestamp } from 'firebase/database';
-import { app } from '@/firebase'; // Ensure this path is correct
+import { app } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Toast } from "@/components/ui/toast"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster";
 
-const FloatingElement: React.FC<{ delay: number }> = ({ delay }) => {
-  const controls = useAnimation();
-  const icons = [Star, Heart, Zap, Sparkles];
-  const Icon = icons[Math.floor(Math.random() * icons.length)];
-  const colors = ['text-yellow-200', 'text-pink-200', 'text-blue-200', 'text-green-200'];
-  const color = colors[Math.floor(Math.random() * colors.length)];
-
-  useEffect(() => {
-    controls.start({
-      y: ['0%', '100%'],
-      x: ['-10%', '10%'],
-      rotate: [0, 360],
-      opacity: [0, 1, 0],
-      transition: {
-        duration: Math.random() * 10 + 10,
-        ease: "easeInOut",
-        repeat: Infinity,
-        delay: delay
-      }
-    });
-  }, [controls, delay]);
-
+// Background particle element
+const BackgroundParticle: React.FC<{ 
+  delay: number, 
+  size: number,
+  color: string 
+}> = ({ delay, size, color }) => {
   return (
     <motion.div
       className={`absolute ${color}`}
-      style={{
+      style={{ 
         left: `${Math.random() * 100}%`,
-        top: `-${Math.random() * 20}%`
+        top: `-${Math.random() * 10}%`,
+        width: size,
+        height: size,
+        borderRadius: '50%'
       }}
-      animate={controls}
-    >
-      <Icon size={Math.random() * 20 + 10} />
-    </motion.div>
+      animate={{
+        y: ['0vh', '100vh'],
+        x: ['-5%', '5%'],
+        opacity: [0, 0.8, 0],
+      }}
+      transition={{
+        duration: Math.random() * 5 + 10,
+        ease: "linear",
+        repeat: Infinity,
+        delay: delay
+      }}
+    />
   );
 };
+
+// Gradient text component similar to Home component
+const GradientText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-indigo-400">
+    {children}
+  </span>
+);
 
 const Contact: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [location, setLocation] = useState('');
-  const [ipAddress, setIpAddress] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Get user's location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation(`${position.coords.latitude},${position.coords.longitude}`);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-        }
-      );
-    }
-
-    // Get user's IP address
-    fetch('https://api.ipify.org?format=json')
-      .then(response => response.json())
-      .then(data => setIpAddress(data.ip))
-      .catch(error => console.error("Error fetching IP:", error));
+  // Generate particles with different colors
+  const particles = React.useMemo(() => {
+    return Array.from({ length: 30 }).map((_, i) => {
+      const colors = [
+        'bg-purple-500/20', 
+        'bg-indigo-500/20', 
+        'bg-blue-500/20', 
+        'bg-pink-500/20'
+      ];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = Math.random() * 10 + 5;
+      return { id: i, delay: i * 0.2, size, color };
+    });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,33 +76,31 @@ const Contact: React.FC = () => {
     try {
       const db = getDatabase(app);
       const messagesRef = ref(db, 'messages');
+      
       await push(messagesRef, {
         name,
         email,
         message,
-        location,
-        ipAddress,
         timestamp: serverTimestamp()
       });
 
       toast({
-        title: "Message Sent",
-        description: "Thank you for your message. We'll get back to you soon!",
-        duration: 5000,
-        className: "bg-gray-800 text-white border-gray-700",
+        title: "Message Sent Successfully",
+        description: "Thank you for reaching out! We'll respond to your message soon.",
+        className: "bg-gradient-to-r from-purple-900/90 to-indigo-900/90 text-white border border-purple-500/30",
       });
 
+      // Reset form
       setName('');
       setEmail('');
       setMessage('');
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
-        title: "Error",
+        title: "Message Failed to Send",
         description: "There was a problem sending your message. Please try again.",
         variant: "destructive",
-        duration: 5000,
-        className: "bg-red-900 text-white border-red-700",
+        className: "bg-red-900/90 text-white border border-red-500/30",
       });
     } finally {
       setIsSubmitting(false);
@@ -116,72 +108,97 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <section className="py-12 px-4 bg-gray-900  min-h-screen flex items-center justify-center overflow-hidden relative">
-      {[...Array(40)].map((_, i) => (
-        <FloatingElement key={i} delay={i * 0.2} />
+    <section className="py-16 px-4 min-h-screen flex items-center justify-center overflow-hidden relative bg-gray-900">
+      {/* Background particles */}
+      {particles.map(particle => (
+        <BackgroundParticle 
+          key={particle.id} 
+          delay={particle.delay} 
+          size={particle.size}
+          color={particle.color}
+        />
       ))}
+      
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
         className="relative z-10 w-full max-w-md"
       >
-        <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
+        <div className="backdrop-blur-xl bg-white/5 rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
           <div className="p-8 space-y-6">
-            <h2 className="text-3xl font-bold text-center text-white mb-2">Get in Touch</h2>
-            <p className="text-center text-white/80 mb-6">We&apos;d love to hear from you. Send us a message!</p>
+            <h2 className="text-3xl font-bold text-center mb-2">
+              <GradientText>Get in Touch</GradientText>
+            </h2>
+            <p className="text-center text-gray-300 mb-6">
+              We would love to hear from you. Send us a message!
+            </p>
+            
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />
+              <div className="relative group">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-purple-400 transition-colors" size={18} />
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your Name"
                   required
-                  className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder-white/50 focus:border-white focus:ring-2 focus:ring-white/50"
+                  className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                 />
               </div>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />
+              
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-purple-400 transition-colors" size={18} />
                 <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your Email"
                   required
-                  className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder-white/50 focus:border-white focus:ring-2 focus:ring-white/50"
+                  className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                 />
               </div>
-              <div className="relative">
-                <MessageSquare className="absolute left-3 top-3 text-white/60" size={18} />
+              
+              <div className="relative group">
+                <MessageSquare className="absolute left-3 top-3 text-gray-400 group-focus-within:text-purple-400 transition-colors" size={18} />
                 <Textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Your Message"
                   required
-                  className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder-white/50 focus:border-white focus:ring-2 focus:ring-white/50"
+                  className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                   rows={4}
                 />
               </div>
-              <Button
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
-                type="submit"
-                disabled={isSubmitting}
+              
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                {isSubmitting ? 'Sending...' : 'Send Message'}
-              </Button>
+                <Button
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold py-2 px-4 rounded-md transition duration-300 ease-in-out"
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </motion.div>
             </form>
+            
+            <Toaster />
           </div>
         </div>
       </motion.div>
-      <Toaster />
     </section>
   );
-};
-
+} 
 export default Contact;
