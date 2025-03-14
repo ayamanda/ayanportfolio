@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import Image from 'next/image';
 
 type ButtonType = 'download' | 'redirect';
 
@@ -52,19 +53,20 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ editingProject, onProj
 
     const onSubmit = async (data: Project) => {
         try {
-            let link = data.buttonLink;
+            let link = data.buttonLink || '';
             if (!link.startsWith('http://') && !link.startsWith('https://')) {
                 link = 'http://' + link;
             }
 
             const projectData = {
                 name: data.name,
+                slug: data.slug || generateSlug(data.name), // Use existing slug or generate new one
                 description: data.description,
                 buttonType: data.buttonType,
                 buttonLink: link,
                 coverPhoto: data.coverPhoto,
                 isFeatured: data.isFeatured || false
-            };
+              };
 
             if (editingProject) {
                 await updateDoc(doc(db, 'projects', editingProject.id), projectData);
@@ -81,6 +83,16 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ editingProject, onProj
             console.error('Project operation failed:', error);
         }
     };
+
+    const generateSlug = (name: string) => {
+        return name
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+      };
+      
 
     const onDrop = async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
@@ -149,7 +161,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ editingProject, onProj
                         <p>Drag & drop project cover photo or click to select</p>
                     </div>
                     {coverPhoto && (
-                        <img src={coverPhoto} alt="Cover" className="w-full h-40 object-cover rounded" />
+                        <Image src={coverPhoto} alt="Cover" className="w-full h-40 object-cover rounded" />
                     )}
                 </form>
             </CardContent>

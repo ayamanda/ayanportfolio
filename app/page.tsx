@@ -7,6 +7,14 @@ import ClientPortfolio from './ClientPortfolio';
 import { Profile, Project, Skill } from '../types';
 import Loader from '@/components/Loader';
 
+// Helper function to generate slugs
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 function usePortfolioData() {
   const [data, setData] = useState<{ profile: Profile | null, projects: Project[], skills: Skill[] }>({
     profile: null,
@@ -30,7 +38,19 @@ function usePortfolioData() {
           console.error('No profile document found in Firestore');
         }
 
-        const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+        // Process projects and add slugs if they don't exist
+        const projects = projectsSnapshot.docs.map(doc => {
+          const projectData = doc.data();
+          const project = { 
+            id: doc.id, 
+            ...projectData,
+            // Generate slug if not already present in the database
+            slug: projectData.slug || generateSlug(projectData.name)
+          } as Project;
+          
+          return project;
+        });
+
         const skills = skillsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Skill));
 
         setData({ profile, projects, skills });

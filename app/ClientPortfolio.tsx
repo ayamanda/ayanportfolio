@@ -81,6 +81,8 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
     twitter: profile.twitterURL,
     linkedin: profile.linkedinURL,
     instagram: profile.instagramURL,
+    github: profile.githubURL,
+    email: profile.email 
   };
 
   const floatingElements = ['&lt;/', '{}', '[]', '//', '( )', '// TODO', '&lt;div&gt;', '&lt;/div&gt;'];

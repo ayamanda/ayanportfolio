@@ -13,28 +13,22 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
+// Add better error handling in the API route
 export async function POST(req: NextRequest) {
   try {
-    // Validate request body
     const body = await req.json();
-    if (!body.messages || !Array.isArray(body.messages)) {
-      return NextResponse.json(
-        { error: 'Invalid request format' },
-        { status: 400 }
-      );
+    
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is not configured');
     }
 
-    // Validate Groq API key
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json(
-        { error: 'Groq API key not configured' },
-        { status: 500 }
-      );
+    if (!body.messages || !Array.isArray(body.messages)) {
+      throw new Error('Invalid request format: messages array is required');
     }
 
     const completion = await groq.chat.completions.create({
       messages: body.messages,
-      model: "llama-3.1-70b-versatile",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.7,
       max_tokens: 1024,
       top_p: 1,
@@ -42,7 +36,6 @@ export async function POST(req: NextRequest) {
       stream: false
     });
 
-    // Validate completion response
     if (!completion?.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from Groq API');
     }
@@ -52,15 +45,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Chat API Error:', error);
-    const errorResponse: ErrorResponse = {
-      error: 'Failed to process chat request'
-    };
-
-    // Add error details in development
-    if (process.env.NODE_ENV === 'development') {
-      errorResponse.details = error instanceof Error ? error.message : String(error);
-    }
-
-    return NextResponse.json(errorResponse, { status: 500 });
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
   }
 }
