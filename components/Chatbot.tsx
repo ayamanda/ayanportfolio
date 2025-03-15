@@ -1,18 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Loader2, Send, Sparkles, ThumbsUp, ThumbsDown, MoreHorizontal, ArrowUp, ChevronDown } from 'lucide-react';
+import { MessageSquare, X, Loader2, Send, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Profile, Project, Skill, Message as MessageType, ChatSession } from '../types';
 import { doc, collection, addDoc, updateDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { v4 as uuidv4 } from 'uuid';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import {
   Drawer,
   DrawerContent
 } from "@/components/ui/drawer";
+import { ChatMessages } from './chat/ChatMessages';
+import { ChatInput } from './chat/ChatInput';
 
 interface ChatbotProps {
   profile: Profile;
@@ -62,7 +61,7 @@ Keep responses concise and friendly. When discussing projects or skills, provide
 const initialMessage: MessageType = {
   id: uuidv4(),
   role: 'assistant',
-  content: "👋 Hi! I'm Hira, your AI assistant. How can I help you learn more about this portfolio?",
+  content: "👋 Hi! I'm Hira, your AI assistant. How can I help you learn more about Ayan and his works",
   timestamp: Date.now(),
 };
 
@@ -94,7 +93,6 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
   const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const chatContentRef = useRef<HTMLDivElement>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const [pulseButton, setPulseButton] = useState(true);
   
@@ -107,9 +105,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
         const q = query(
           sessionsRef, 
           where('userEmail', '==', userEmail),
-          orderBy('startTime', 'desc'),
-          // Limit to the most recent session
-          // Firebase requires a .limit() after orderBy()
+          orderBy('startTime', 'desc')
         );
         
         const querySnapshot = await getDocs(q);
@@ -202,7 +198,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     }
   };
 
-  // Move endChatSession inside useCallback
+  // End chat session
   const endChatSession = useCallback(async () => {
     if (!sessionId) return;
     
@@ -214,7 +210,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     } catch (error) {
       console.error('Error ending chat session:', error);
     }
-  }, [sessionId]); // Add sessionId as dependency
+  }, [sessionId]);
 
   // Toggle feedback on a message
   const toggleFeedback = async (messageId: string, isHelpful: boolean) => {
@@ -248,20 +244,16 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   // Auto-resize text area based on content
   const autoResizeTextarea = () => {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
-      const newHeight = Math.min(inputRef.current.scrollHeight, 120); // Increased max height
+      const newHeight = Math.min(inputRef.current.scrollHeight, 120);
       inputRef.current.style.height = `${newHeight}px`;
     }
   };
 
-  // Keep button pulsing when minimized
+  // Keep button animated when minimized - improved animation
   useEffect(() => {
     if (mode === 'minimized') {
       const pulseInterval = setInterval(() => {
@@ -271,11 +263,6 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
       return () => clearInterval(pulseInterval);
     }
   }, [mode]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   // Focus input when chat opens
   useEffect(() => {
@@ -296,10 +283,10 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
   }, [mode, sessionId, initChatSession]);
 
   // Handle form submission
-  const handleSubmit = async (e?: React.FormEvent, questionText?: string) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     
-    const userMessage = questionText || input.trim();
+    const userMessage = input.trim();
     if (!userMessage || isLoading) return;
     
     // Clear input and suggestions
@@ -395,7 +382,14 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     }
   };
 
-  // Update the toggleChat useCallback to include endChatSession in dependencies
+  // Handle suggested question
+  const handleSuggestedQuestion = (question: string) => {
+    setInput(question);
+    setTimeout(() => {
+      handleSubmit();
+    }, 100);
+  };
+
   const toggleChat = useCallback(() => {
     if (mode === 'minimized') {
       setMode('open');
@@ -403,335 +397,249 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
       endChatSession();
       setMode('minimized');
     }
-  }, [mode, endChatSession]); // Add endChatSession to dependencies
+  }, [mode, endChatSession]);
   
-  // Handle keyboard interactions
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   };
+
+ // Render suggested questions chips
+ const renderSuggestedQuestions = () => {
+  if (!showSuggestions || messages.length > 1) return null;
   
-  // Select a suggested question
-  const handleSuggestedQuestion = (question: string) => {
-    handleSubmit(undefined, question);
-  };
-
-  // Render suggested questions chips
-  const renderSuggestedQuestions = () => {
-    if (!showSuggestions || messages.length > 1) return null;
-    
-    return (
-      <div className="px-4 py-3 space-y-2">
-        <p className="text-xs text-gray-400 font-medium">Suggested questions:</p>
-        <div className="flex flex-wrap gap-2">
-          {suggestedQuestions.map((question, index) => (
-            <motion.button
-              key={index}
-              onClick={() => handleSuggestedQuestion(question)}
-              className="text-xs px-3 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors duration-200 whitespace-nowrap"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {question}
-            </motion.button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Rendering the chatbot UI
-  const renderChatbot = () => {
-    // Define common components
-    const ChatHeader = () => (
-      <motion.div 
-        className="border-b border-gray-800 py-3 px-4 bg-gray-900 bg-opacity-95 backdrop-blur-sm"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-white">Hira</h3>
-              <p className="text-xs text-gray-400">AI Assistant for {profile.name}</p>
-            </div>
-          </div>
-          <button 
-            onClick={toggleChat}
-            className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-800"
+  return (
+    <div className="px-4 py-3 space-y-2">
+      <p className="text-xs text-gray-400 font-medium">Suggested questions:</p>
+      <div className="flex flex-wrap gap-2">
+        {suggestedQuestions.map((question, index) => (
+          <button
+            key={index}
+            onClick={() => handleSuggestedQuestion(question)}
+            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full border border-gray-700/50 transition-colors"
           >
-            <X className="h-5 w-5" />
+            {question}
           </button>
-        </div>
-      </motion.div>
-    );
-
-    const DesktopChat = () => (
-      <motion.div
-        className="fixed bottom-6 right-6 z-50 w-[480px] h-[80vh] max-h-[800px] min-h-[400px] rounded-2xl shadow-2xl bg-gray-900 border border-gray-800 flex flex-col overflow-hidden"
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-        transition={{ duration: 0.2 }}
-      >
-        <ChatHeader />
-        
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <ScrollArea className="flex-1 px-4 py-3">
-            <div className="space-y-6" ref={chatContentRef}>
-              {messages.map((message) => (
-                <MessageBubble 
-                  key={message.id} 
-                  message={message} 
-                  toggleFeedback={toggleFeedback}
-                />
-              ))}
-              
-              {isLoading && (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-          
-          {renderSuggestedQuestions()}
-          
-          <motion.div 
-            className="p-3 border-t border-gray-800 bg-gray-900 bg-opacity-95 backdrop-blur-sm"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
-              <div className="relative flex-1 bg-gray-800 rounded-lg">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    autoResizeTextarea();
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your message..."
-                  className="w-full bg-transparent border-0 focus:ring-0 text-white placeholder-gray-500 py-3 px-4 max-h-[120px] resize-none text-sm"
-                  style={{ height: '44px' }}
-                  rows={1}
-                />
-              </div>
-              <Button 
-                type="submit" 
-                disabled={isLoading || !input.trim()} 
-                className={`shrink-0 h-11 w-11 rounded-full p-0 bg-gradient-to-r ${themeColors.primary} hover:${themeColors.primaryHover} transition-all duration-200 flex items-center justify-center`}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-white" />
-                ) : (
-                  <Send className="h-5 w-5 text-white" />
-                )}
-              </Button>
-            </form>
-          </motion.div>
-        </div>
-      </motion.div>
-    );
-
-    // Return correct UI based on device type
-    if (isMobile) {
-      return (
-        <Drawer open={mode === 'open'} onOpenChange={(open) => !open && toggleChat()}>
-          <DrawerContent className="bg-gray-900 h-[90vh] max-h-[90vh] rounded-t-xl">
-            <div className="flex flex-col h-full">
-              <ChatHeader />
-              
-              <ScrollArea className="flex-1">
-                <div className="px-4 py-3 space-y-6" ref={chatContentRef}>
-                  {messages.map((message) => (
-                    <MessageBubble 
-                      key={message.id} 
-                      message={message} 
-                      toggleFeedback={toggleFeedback}
-                    />
-                  ))}
-                  
-                  {isLoading && (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
-                    </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-              
-              {renderSuggestedQuestions()}
-              
-              <div className="p-4 border-t border-gray-800 bg-gray-900 bg-opacity-95 backdrop-blur-sm sticky bottom-0 pb-6">
-                <form onSubmit={handleSubmit} className="flex items-end gap-2">
-                  <div className="relative flex-1 bg-gray-800 rounded-lg">
-                    <textarea
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => {
-                        setInput(e.target.value);
-                        autoResizeTextarea();
-                      }}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Type your message..."
-                      className="w-full bg-transparent border-0 focus:ring-0 text-white placeholder-gray-500 py-3 px-4 max-h-[120px] resize-none text-sm"
-                      style={{ height: '44px' }}
-                      rows={1}
-                      autoFocus
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    disabled={isLoading || !input.trim()} 
-                    className={`shrink-0 h-11 w-11 rounded-full p-0 bg-gradient-to-r ${themeColors.primary} hover:${themeColors.primaryHover} transition-all duration-200 flex items-center justify-center`}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-white" />
-                    ) : (
-                      <Send className="h-5 w-5 text-white" />
-                    )}
-                  </Button>
-                </form>
-              </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      );
-    }
-    
-    return <DesktopChat />;
-  };
-
-  return (
-    <>
-      {/* Chat Button - Just an icon with glowing effect */}
-      {mode === 'minimized' && (
-        <motion.button
-          className={`fixed bottom-6 right-6 z-50 flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg ${pulseButton ? 'shadow-indigo-500/50' : 'shadow-indigo-500/20'} transition-shadow duration-1000`}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={toggleChat}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ 
-            opacity: 1, 
-            scale: 1,
-            boxShadow: pulseButton 
-              ? '0 0 0 0 rgba(99, 102, 241, 0.7)' 
-              : '0 0 0 10px rgba(99, 102, 241, 0)'
-          }}
-          transition={{ 
-            duration: 0.3,
-            boxShadow: { duration: 1.5, repeat: Infinity, repeatType: 'reverse' } 
-          }}
-        >
-          <MessageSquare className="w-6 h-6" />
-          <span className="sr-only">Chat with Hira</span>
-          
-          {/* Animated ring around the button */}
-          <motion.div 
-            className="absolute -inset-0.5 rounded-full border-2 border-indigo-400 opacity-0"
-            animate={{ 
-              opacity: [0, 0.8, 0],
-              scale: [0.8, 1.2, 1.5],
-            }}
-            transition={{ 
-              duration: 2,
-              repeat: Infinity,
-              repeatType: 'loop',
-              times: [0, 0.5, 1]
-            }}
-          />
-        </motion.button>
-      )}
-
-      {/* Chat Window */}
-      <AnimatePresence>
-        {mode === 'open' && renderChatbot()}
-      </AnimatePresence>
-    </>
-  );
-}
-
-// Message bubble component with animations
-function MessageBubble({ message, toggleFeedback }: { 
-  message: MessageType, 
-  toggleFeedback: (id: string, isHelpful: boolean) => void 
-}) {
-  const [showActions, setShowActions] = useState(false);
-  const isUser = message.role === 'user';
-  
-  return (
-    <motion.div 
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className={`max-w-[85%] ${isUser ? 'order-1' : 'order-none'}`}>
-        {!isUser && (
-          <div className="w-6 h-6 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center mb-1.5 ml-0.5">
-            <Sparkles className="w-3 h-3 text-white" />
-          </div>
-        )}
-        
-        <div
-          className={`relative rounded-2xl px-4 py-3 ${
-            isUser 
-              ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-tr-none shadow-md' 
-              : 'bg-gray-800 text-gray-100 rounded-tl-none shadow-sm'
-          }`}
-          onMouseEnter={() => !isUser && setShowActions(true)}
-          onMouseLeave={() => !isUser && setShowActions(false)}
-        >
-          <div className="prose prose-sm max-w-none text-current">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {message.content}
-            </ReactMarkdown>
-          </div>
-          
-          {!isUser && showActions && !message.feedback && (
-            <motion.div 
-              className="absolute -bottom-8 right-0 flex items-center gap-1 bg-gray-800 rounded-full p-1 shadow-md"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              <button
-                onClick={() => toggleFeedback(message.id, true)}
-                className="p-1.5 rounded-full hover:bg-gray-700 text-gray-400 hover:text-green-400 transition-colors"
-              >
-                <ThumbsUp className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => toggleFeedback(message.id, false)}
-                className="p-1.5 rounded-full hover:bg-gray-700 text-gray-400 hover:text-red-400 transition-colors"
-              >
-                <ThumbsDown className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          )}
-          
-          {!isUser && message.feedback && (
-            <div className="absolute -bottom-6 right-0 flex items-center gap-1">
-              <span className="text-xs text-gray-500">
-                {message.feedback.helpful ? 'Feedback: Helpful' : 'Feedback: Not helpful'}
-              </span>
-            </div>
-          )}
-        </div>
+        ))}
       </div>
-    </motion.div>
+    </div>
   );
+};
+
+// Improved scroll behavior for new messages
+useEffect(() => {
+  if (messagesEndRef.current) {
+    // Delay scrolling to ensure content is rendered first
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }
+}, [messages, isLoading]);
+
+// Cleanup on unmount
+useEffect(() => {
+  return () => {
+    if (sessionId) {
+      endChatSession();
+    }
+  };
+}, [sessionId, endChatSession]);
+
+// Detect viewport to apply different styling for desktop and mobile
+const [isDesktop, setIsDesktop] = useState(false);
+const [windowHeight, setWindowHeight] = useState(0);
+
+// Set desktop mode and window height on mount and resize
+useEffect(() => {
+  const checkDimensions = () => {
+    setIsDesktop(window.innerWidth >= 1024);
+    setWindowHeight(window.innerHeight);
+  };
+  
+  // Check on mount
+  checkDimensions();
+  
+  // Check on resize
+  window.addEventListener('resize', checkDimensions);
+  return () => window.removeEventListener('resize', checkDimensions);
+}, []);
+
+// Calculate dynamic height for chat window based on viewport
+const getChatHeight = () => {
+  if (isDesktop) {
+    // Taller on desktop - 75% of viewport height but at least 600px
+    return Math.max(windowHeight * 0.75, 600);
+  } else {
+    // On mobile, use 85% of viewport height
+    return windowHeight * 0.85;
+  }
+};
+
+// Button animation variants
+const buttonVariants = {
+  initial: { scale: 1 },
+  pulse: { 
+    scale: [1, 1.1, 1], 
+    boxShadow: [
+      "0 0 0 0 rgba(99, 102, 241, 0)",
+      "0 0 0 10px rgba(99, 102, 241, 0.3)",
+      "0 0 0 0 rgba(99, 102, 241, 0)"
+    ],
+    transition: { 
+      duration: 2,
+      repeat: Infinity,
+      repeatDelay: 1
+    }
+  },
+  hover: { scale: 1.05 },
+  tap: { scale: 0.95 }
+};
+
+return (
+  <>
+    {/* Only render button when chat is minimized */}
+    {mode === 'minimized' && (
+      <motion.button
+        onClick={toggleChat}
+        className="fixed bottom-6 right-6 flex items-center justify-center w-16 h-16 rounded-full shadow-lg z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-all duration-300"
+        initial="initial"
+        animate="pulse"
+        whileHover="hover"
+        whileTap="tap"
+        variants={buttonVariants}
+      >
+        <motion.div
+          initial={{ opacity: 1 }}
+          animate={{ opacity: [1, 0.8, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <div className="relative">
+            <MessageSquare className="w-7 h-7 text-white" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse border-2 border-white" />
+          </div>
+        </motion.div>
+      </motion.button>
+    )}
+
+    {isDesktop ? (
+      // Desktop Mode - Fixed Panel with dynamic height
+      <AnimatePresence>
+        {mode === 'open' && (
+          <motion.div 
+            className="fixed bottom-6 right-6 w-96 rounded-2xl shadow-xl z-30 overflow-hidden border border-gray-700 flex flex-col bg-gray-900 "
+            style={{ height: `${getChatHeight()}px` }}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            {/* Header - Only close button here */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800 bg-gradient-to-r from-indigo-800 to-purple-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="font-medium bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">Chat with Hira</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  endChatSession();
+                  setMode('minimized');
+                }}
+                className="text-gray-200 hover:text-white hover:bg-purple-700/50"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Messages - Dynamic height for desktop with improved scroll */}
+            <div className="flex-1 overflow-hidden">
+              <ChatMessages 
+                messages={messages} 
+                isLoading={isLoading} 
+                toggleFeedback={toggleFeedback}
+                messagesEndRef={messagesEndRef}
+              />
+            </div>
+
+            {/* Suggested Questions */}
+            {renderSuggestedQuestions()}
+
+            {/* Input */}
+            <ChatInput 
+              input={input}
+              setInput={setInput}
+              isLoading={isLoading}
+              handleSubmit={handleSubmit}
+              handleKeyDown={handleKeyDown}
+              inputRef={inputRef}
+              autoResizeTextarea={autoResizeTextarea}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    ) : (
+      // Mobile Mode - Drawer from bottom (improved)
+      <Drawer open={mode === 'open'} onOpenChange={(open) => {
+        if (!open) {
+          endChatSession();
+          setMode('minimized');
+        }
+      }}>
+        <DrawerContent className="max-h-[90vh] rounded-t-xl bg-gray-900 text-white border-t border-gray-700">
+          <div className="flex flex-col h-[85vh]">
+            {/* Header - Only close button here */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800 bg-gray-900">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="font-medium bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">Chat with Hira</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  endChatSession();
+                  setMode('minimized');
+                }}
+                className="text-gray-200 hover:text-white hover:bg-purple-700/50"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-hidden">
+              <ChatMessages 
+                messages={messages} 
+                isLoading={isLoading} 
+                toggleFeedback={toggleFeedback}
+                messagesEndRef={messagesEndRef}
+              />
+            </div>
+
+            {/* Suggested Questions */}
+            {renderSuggestedQuestions()}
+
+            {/* Input */}
+            <ChatInput 
+              input={input}
+              setInput={setInput}
+              isLoading={isLoading}
+              handleSubmit={handleSubmit}
+              handleKeyDown={handleKeyDown}
+              inputRef={inputRef}
+              autoResizeTextarea={autoResizeTextarea}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    )}
+  </>
+);
 }

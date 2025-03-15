@@ -1,6 +1,7 @@
-import React from 'react';
-import { Send } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, Sparkles, Mic, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { motion } from 'framer-motion';
 
 interface ChatInputProps {
   input: string;
@@ -21,10 +22,22 @@ export function ChatInput({
   inputRef,
   autoResizeTextarea
 }: ChatInputProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  
   return (
-    <div className="border-t border-gray-800 p-4 bg-gray-900/95 backdrop-blur-sm">
-      <form onSubmit={handleSubmit}>
-        <div className="relative">
+    <div className="border-t border-gray-800/50 p-4 bg-gray-900/90 backdrop-blur-md">
+      <form onSubmit={handleSubmit} className="relative">
+        <motion.div 
+          className={`relative rounded-xl overflow-hidden border transition-all ${
+            isFocused 
+              ? 'border-violet-500/50 shadow-lg shadow-violet-500/10' 
+              : 'border-gray-700/50'
+          }`}
+          animate={{ 
+            scale: isFocused ? 1.01 : 1
+          }}
+          transition={{ duration: 0.2 }}
+        >
           <textarea
             ref={inputRef}
             value={input}
@@ -32,23 +45,62 @@ export function ChatInput({
               setInput(e.target.value);
               autoResizeTextarea();
             }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             placeholder="Ask me anything..."
             rows={1}
-            className="w-full bg-gray-800 text-white rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none border border-gray-700/50"
+            className="w-full bg-gradient-to-b from-gray-800 to-gray-900 text-white rounded-xl pl-4 pr-24 py-3 focus:outline-none resize-none"
             style={{ maxHeight: '120px' }}
+            disabled={isLoading}
           />
-          <Button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="absolute right-2 bottom-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 p-2 rounded-lg"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-        <p className="text-xs text-gray-500 mt-1.5 text-center">
-          Responses are AI-generated and may not be perfect.
-        </p>
+          
+          <div className="absolute right-2 bottom-2 flex gap-2">
+            {input && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors duration-200"
+                onClick={() => setInput('')}
+                aria-label="Clear input"
+              >
+                <X className="w-4 h-4" />
+              </motion.button>
+            )}
+            
+            <motion.button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className={`
+                ${isLoading || !input.trim() 
+                  ? 'bg-gray-700 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/20'
+                } 
+                p-2 rounded-lg transition-all duration-300
+              `}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              aria-label="Send message"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </motion.button>
+          </div>
+        </motion.div>
+        
+        <motion.p 
+          className="text-xs text-gray-400 mt-2 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          Powered by AI • Press Shift+Enter for a new line • Enter to send
+        </motion.p>
       </form>
     </div>
   );

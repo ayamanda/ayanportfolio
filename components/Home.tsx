@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { motion, useInView } from 'framer-motion';
-import { Code, Briefcase, Clock, ExternalLink, ChevronLeft, ChevronRight, Award, Star, Sparkles } from 'lucide-react';
+import { Code, Briefcase, Clock, ExternalLink, Award, Star, Sparkles } from 'lucide-react';
 import { Project } from '../types';
 import { TextGenerateEffect } from './ui/text-generate-effect';
 import GlassCard from './GlassCard';
@@ -39,101 +39,7 @@ const GradientText: React.FC<{ children: React.ReactNode; className?: string }> 
   </span>
 );
 
-// Optimized carousel component
-const ProjectCarousel: React.FC<{ projects: Project[] }> = ({ projects }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(carouselRef);
-
-  useEffect(() => {
-    if (!isInView || projects.length <= 1) return;
-    
-    const timer = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % projects.length);
-    }, 5000);
-    
-    return () => clearInterval(timer);
-  }, [isInView, projects.length]);
-
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index);
-  };
-
-  if (!projects || projects.length === 0) {
-    return (
-      <div className="w-full h-48 md:h-64 flex items-center justify-center bg-gray-800/50 rounded-lg">
-        <p className="text-gray-400">No projects available</p>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={carouselRef} className="relative w-full h-48 md:h-64 overflow-hidden rounded-lg shadow-lg">
-      {projects.map((project, index) => (
-        <motion.div
-          key={project.id || index}
-          className="absolute w-full h-full"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: index === currentIndex ? 1 : 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent z-10" />
-          <Image 
-            src={project.coverPhoto || '/placeholder-project.jpg'} 
-            alt={project.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover"
-          />
-          <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
-            <h4 className="text-white font-bold text-lg truncate">{project.name}</h4>
-          </div>
-        </motion.div>
-      ))}
-      
-      {/* Navigation dots */}
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-30">
-        {projects.map((_, index) => (
-          <button
-            key={index}
-            type="button"
-            aria-label={`Go to slide ${index + 1}`}
-            className={`w-2 h-2 rounded-full transition-all ${
-              index === currentIndex 
-                ? 'bg-white w-4' 
-                : 'bg-white/40 hover:bg-white/60'
-            }`}
-            onClick={() => goToSlide(index)}
-          />
-        ))}
-      </div>
-      
-      {/* Navigation arrows */}
-      {projects.length > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label="Previous slide"
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-2 transition-all z-30"
-            onClick={() => goToSlide((currentIndex - 1 + projects.length) % projects.length)}
-          >
-            <ChevronLeft className="text-white" size={20} />
-          </button>
-          <button
-            type="button"
-            aria-label="Next slide"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-2 transition-all z-30"
-            onClick={() => goToSlide((currentIndex + 1) % projects.length)}
-          >
-            <ChevronRight className="text-white" size={20} />
-          </button>
-        </>
-      )}
-    </div>
-  );
-};
-
-// Main Home component with improved architecture
+// Main Home component with bento grid layout
 const Home: React.FC<HomeProps> = ({
   name,
   about,
@@ -143,17 +49,11 @@ const Home: React.FC<HomeProps> = ({
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [featuredProject, setFeaturedProject] = useState<Project | null>(null);
-  const [showcaseProjects, setShowcaseProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Section references for scroll animations
-  const aboutRef = useRef<HTMLDivElement>(null);
-  const skillsRef = useRef<HTMLDivElement>(null);
-  const projectsRef = useRef<HTMLDivElement>(null);
-  
-  const isAboutInView = useInView(aboutRef, { once: true, amount: 0.3 });
-  const isSkillsInView = useInView(skillsRef, { once: true, amount: 0.3 });
-  const isProjectsInView = useInView(projectsRef, { once: true, amount: 0.3 });
+  const bentoGridRef = useRef<HTMLDivElement>(null);
+  const isBentoGridInView = useInView(bentoGridRef, { once: true, amount: 0.2 });
 
   // Memoized skill tags to prevent re-renders
   const skillTags = useMemo(() => {
@@ -163,7 +63,7 @@ const Home: React.FC<HomeProps> = ({
   }, [skills]);
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchFeaturedProject = async () => {
       try {
         setIsLoading(true);
         
@@ -174,17 +74,7 @@ const Home: React.FC<HomeProps> = ({
           limit(1)
         );
         
-        // Fetch showcase projects
-        const showcaseQuery = query(
-          collection(db, 'projects'),
-          where('showInCarousel', '==', true),
-          limit(5)
-        );
-        
-        const [featuredSnapshot, showcaseSnapshot] = await Promise.all([
-          getDocs(featuredQuery),
-          getDocs(showcaseQuery)
-        ]);
+        const featuredSnapshot = await getDocs(featuredQuery);
         
         if (!featuredSnapshot.empty) {
           const featuredDoc = featuredSnapshot.docs[0];
@@ -193,22 +83,14 @@ const Home: React.FC<HomeProps> = ({
             ...featuredDoc.data() 
           } as Project);
         }
-        
-        if (!showcaseSnapshot.empty) {
-          const showcaseProjects = showcaseSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          } as Project));
-          setShowcaseProjects(showcaseProjects);
-        }
       } catch (error) {
-        console.error('Failed to fetch projects:', error);
+        console.error('Failed to fetch featured project:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProjects();
+    fetchFeaturedProject();
   }, []);
 
   // Helper function to safely truncate HTML content
@@ -240,14 +122,14 @@ const Home: React.FC<HomeProps> = ({
     <section className="py-16 px-4 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <motion.div 
-          ref={aboutRef}
+          ref={bentoGridRef}
           variants={containerVariants}
           initial="hidden"
-          animate={isAboutInView ? "visible" : "hidden"}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          animate={isBentoGridInView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6"
         >
-          {/* About me card */}
-          <motion.div variants={itemVariants} className="lg:col-span-2">
+          {/* About me card - spans 8 columns on large screens, full width on small */}
+          <motion.div variants={itemVariants} className="md:col-span-4 lg:col-span-8">
             <GlassCard className="h-full" gradient="from-blue-600/10 to-purple-600/10">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
                 Hi, I&apos;m <GradientText>{name}</GradientText>
@@ -258,8 +140,8 @@ const Home: React.FC<HomeProps> = ({
             </GlassCard>
           </motion.div>
 
-          {/* Skills card */}
-          <motion.div variants={itemVariants} ref={skillsRef}>
+          {/* Skills card - spans 4 columns on large screens */}
+          <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-4">
             <GlassCard className="h-full" gradient="from-indigo-600/10 to-purple-600/10">
               <h3 className="text-xl font-bold mb-4 flex items-center text-white">
                 <Code className="mr-2 text-indigo-400" size={24} /> 
@@ -271,8 +153,8 @@ const Home: React.FC<HomeProps> = ({
             </GlassCard>
           </motion.div>
 
-          {/* Featured project card */}
-          <motion.div variants={itemVariants} className="md:col-span-2">
+          {/* Featured project card - spans 8 columns on large screens */}
+          <motion.div variants={itemVariants} className="md:col-span-4 lg:col-span-8">
             <GlassCard 
               className="h-full" 
               gradient="from-purple-600/10 to-pink-600/10"
@@ -337,8 +219,8 @@ const Home: React.FC<HomeProps> = ({
             </GlassCard>
           </motion.div>
 
-          {/* Stats cards */}
-          <motion.div variants={itemVariants} ref={projectsRef}>
+          {/* Projects stats card - spans 2 columns on medium screens, 2 on large */}
+          <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-2">
             <GlassCard 
               className="h-full flex flex-col justify-between" 
               gradient="from-amber-500/10 to-orange-600/10"
@@ -359,7 +241,8 @@ const Home: React.FC<HomeProps> = ({
             </GlassCard>
           </motion.div>
 
-          <motion.div variants={itemVariants}>
+          {/* Experience stats card - spans 2 columns on medium screens, 2 on large */}
+          <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-2">
             <GlassCard 
               className="h-full flex flex-col justify-between" 
               gradient="from-emerald-500/10 to-teal-600/10"
@@ -382,19 +265,6 @@ const Home: React.FC<HomeProps> = ({
                   <p className="text-sm text-gray-300">Top-rated freelancer</p>
                 </div>
               </div>
-            </GlassCard>
-          </motion.div>
-
-          {/* Project showcase carousel */}
-          <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-1">
-            <GlassCard 
-              className="h-full" 
-              gradient="from-blue-600/10 to-teal-600/10"
-            >
-              <h3 className="text-xl font-bold mb-4 text-white">
-                <GradientText>Project Showcase</GradientText>
-              </h3>
-              <ProjectCarousel projects={showcaseProjects} />
             </GlassCard>
           </motion.div>
         </motion.div>
