@@ -13,6 +13,8 @@ interface ChatInputProps {
   autoResizeTextarea: () => void;
 }
 
+const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 export function ChatInput({
   input,
   setInput,
@@ -99,7 +101,7 @@ export function ChatInput({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
-          Powered by AI • Press Shift+Enter for a new line • Enter to send
+          Powered by AI •  Enter to send
         </motion.p>
       </form>
     </div>
