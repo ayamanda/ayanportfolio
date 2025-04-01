@@ -46,8 +46,8 @@ export function ChatMessages({ messages, isLoading, toggleFeedback, messagesEndR
 
   return (
     <TooltipProvider>
-      <ScrollArea className="flex-1 px-4 py-2 overflow-y-auto h-full bg-gray-900/60 backdrop-blur-sm">
-        <div className="space-y-5 pb-4">
+      <ScrollArea className="h-full w-full overflow-y-auto bg-gray-900/60 backdrop-blur-sm">
+        <div className="space-y-5 p-4 pb-6">
           <AnimatePresence>
             {messages.map((message, index) => (
               <motion.div 
@@ -178,7 +178,7 @@ export function ChatMessages({ messages, isLoading, toggleFeedback, messagesEndR
               </div>
             </motion.div>
           )}
-          <div ref={messagesEndRef} className="h-1" />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </ScrollArea>
     </TooltipProvider>
