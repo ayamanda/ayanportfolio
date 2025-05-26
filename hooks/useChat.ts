@@ -60,7 +60,8 @@ export const useChat = (userEmail?: string) => {
         startTime: Date.now(),
         userEmail: userEmail || 'anonymous',
         messages: [],
-        deviceInfo
+        deviceInfo,
+        userName: ''
       };
       
       const docRef = await addDoc(collection(db, 'chatSessions'), newSession);
