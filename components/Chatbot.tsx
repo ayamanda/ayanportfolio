@@ -10,6 +10,7 @@ import { ChatMessages } from './chat/ChatMessages';
 import { ChatInput } from './chat/ChatInput';
 import { ChatButton } from './chat/ChatButton';
 import { ChatWindow } from './chat/ChatWindow';
+import { NameDialog } from './chat/NameDialog';
 
 interface ChatbotProps {
   profile: Profile;
@@ -38,6 +39,8 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     "How can I contact you?"
   ]);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [showNameDialog, setShowNameDialog] = useState(false); // Change initial value to false
+  const [userName, setUserName] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -46,7 +49,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
   
   // Create the system prompt
   const systemPrompt = `
-  You are Hira, an AI assistant for ${profile.name}'s portfolio website. You are made by ${profile.name}. Here's the information about them:
+  You are Hira, an AI assistant for ${profile.name}'s portfolio website. You are chatting with ${userName || 'a visitor'}. You are made by ${profile.name}. Here's the information about them:
 
   Name: ${profile.name}
   Title: ${profile.title || 'Developer'}
@@ -63,11 +66,12 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
   `).join('\n')}
 
   Important Guidelines:
-  1. Keep responses concise, friendly, and professional
-  2. When discussing projects or skills, provide specific examples from the portfolio
-  3. If asked about topics not related to ${profile.name} or their work, politely decline to comment
-  4. Use personal details to provide more contextual and relevant responses
-  5. Only give contact information if asked about it
+  1. Address the user by their name (${userName}) when appropriate
+  2. Keep responses concise, friendly, and professional
+  3. When discussing projects or skills, provide specific examples from the portfolio
+  4. If asked about topics not related to ${profile.name} or their work, politely decline to comment
+  5. Use personal details to provide more contextual and relevant responses
+  6. Only give contact information if asked about it
   `;
 
   // Initialize a chat session and retrieve previous messages if any
@@ -131,6 +135,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
         id: uuidv4(),
         startTime: Date.now(),
         userEmail: userEmail || 'anonymous',
+        userName: userName,
         messages: [],
         deviceInfo
       };
@@ -150,7 +155,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
       console.error('Error creating/retrieving chat session:', error);
       return null;
     }
-  }, [userEmail, messages]);
+  }, [userEmail, messages, userName]);
 
   // Save a message to Firebase
   const saveMessageToFirebase = async (message: MessageType, chatSessionId: string) => {
@@ -447,12 +452,16 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
 
   const toggleChat = useCallback(() => {
     if (mode === 'minimized') {
-      setMode('open');
+      if (!userName) {
+        setShowNameDialog(true);
+      } else {
+        setMode('open');
+      }
     } else {
       endChatSession();
       setMode('minimized');
     }
-  }, [mode, endChatSession]);
+  }, [mode, endChatSession, userName]);
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -606,8 +615,56 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     );
   };
   
+  // Add this function after your state declarations
+  const handleNameSubmit = async (name: string) => {
+    setUserName(name);
+    setShowNameDialog(false);
+    setMode('open');
+    
+    // Create a new session in Firebase
+    const deviceInfo = {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      screenSize: `${window.innerWidth}x${window.innerHeight}`
+    };
+    
+    const newSession: ChatSession = {
+      id: uuidv4(),
+      startTime: Date.now(),
+      userEmail: userEmail || 'anonymous',
+      userName: name,
+      messages: [],
+      deviceInfo
+    };
+    
+    try {
+      const docRef = await addDoc(collection(db, 'chatSessions'), newSession);
+      setSessionId(docRef.id);
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+  };
+
+  // Update the initial message in useEffect after handleNameSubmit
+  useEffect(() => {
+    if (userName && mode === 'open') {
+      setMessages([{
+        id: uuidv4(),
+        role: 'assistant',
+        content: `👋 Hi ${userName}! I'm Hira, your AI assistant. How can I help you learn more about Ayan and his works?`,
+        timestamp: Date.now(),
+      }]);
+    }
+  }, [userName, mode]);
+
+  // Update your return statement to include the NameDialog
   return (
     <>
+      <NameDialog 
+        open={showNameDialog} 
+        onSubmit={handleNameSubmit} 
+      />
+
       {/* Chat Button */}
       {mode === 'minimized' && (
         <motion.button
@@ -623,32 +680,35 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
         </motion.button>
       )}
 
-      {/* Desktop Version */}
-      {isDesktop ? (
-        <AnimatePresence>
-          {mode === 'open' && (
-            <ChatWindow
-              height={Math.max(window.innerHeight * 0.75, 600)}
-              messages={messages}
-              isLoading={isLoading}
-              input={input}
-              setInput={setInput}
-              handleSubmit={handleSubmit}
-              handleKeyDown={handleKeyDown}
-              toggleFeedback={toggleFeedback}
-              endChatSession={endChatSession}
-              setMode={setMode}
-              messagesEndRef={messagesEndRef}
-              inputRef={inputRef}
-              autoResizeTextarea={autoResizeTextarea}
-              renderSuggestedQuestions={renderSuggestedQuestions}
-            />
+      {/* Chat Interface */}
+      {mode === 'open' && (
+        <>
+          {/* Desktop Version */}
+          {isDesktop ? (
+            <AnimatePresence>
+              <ChatWindow
+                height={Math.max(window.innerHeight * 0.75, 600)}
+                messages={messages}
+                isLoading={isLoading}
+                input={input}
+                setInput={setInput}
+                handleSubmit={handleSubmit}
+                handleKeyDown={handleKeyDown}
+                toggleFeedback={toggleFeedback}
+                endChatSession={endChatSession}
+                setMode={setMode}
+                messagesEndRef={messagesEndRef}
+                inputRef={inputRef}
+                autoResizeTextarea={autoResizeTextarea}
+                renderSuggestedQuestions={renderSuggestedQuestions}
+              />
+            </AnimatePresence>
+          ) : (
+            <AnimatePresence>
+              {renderMobileChat()}
+            </AnimatePresence>
           )}
-        </AnimatePresence>
-      ) : (
-        <AnimatePresence>
-          {renderMobileChat()}
-        </AnimatePresence>
+        </>
       )}
     </>
   );
