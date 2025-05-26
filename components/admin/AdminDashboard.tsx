@@ -6,6 +6,7 @@ import { ProfileSection } from './ProfileSection';
 import { ProjectsSection } from './ProjectSection/ProjectsSection';
 import { SkillsSection } from './SkillsSection';
 import { MessagesSection } from './MessagesSection';
+import { ConversationsSection } from './ConversationSection';
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
@@ -26,6 +27,7 @@ const navItems = [
   { name: 'Projects', icon: Briefcase },
   { name: 'Skills', icon: Code },
   { name: 'Messages', icon: MessageSquare },
+  { name: 'Conversations', icon: MessageSquare },
 ];
 
 export const AdminDashboard: React.FC = () => {
@@ -184,6 +186,7 @@ export const AdminDashboard: React.FC = () => {
                 {activeSection === 'projects' && <ProjectsSection />}
                 {activeSection === 'skills' && <SkillsSection />}
                 {activeSection === 'messages' && <MessagesSection />}
+                {activeSection === 'conversations' && <ConversationsSection />} {/* Add this line */}
               </motion.div>
             </AnimatePresence>
           </div>

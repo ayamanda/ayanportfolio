@@ -49,8 +49,8 @@ export interface Feedback {
 export interface ChatSession {
   id: string;
   startTime: number;
-  endTime?: number;
-  userEmail?: string;
+  userEmail: string;
+  userName: string; 
   messages: Message[];
   deviceInfo: {
     userAgent: string;
