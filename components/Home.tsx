@@ -2,15 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { motion, useInView } from 'framer-motion';
 import { Code, Briefcase, Clock, ExternalLink, Award, Star, Sparkles } from 'lucide-react';
-import { Project } from '../types';
+import { Project, Experience } from '../types';
 import { TextGenerateEffect } from './ui/text-generate-effect';
 import GlassCard from './GlassCard';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useRef } from 'react';
+import { Timeline } from './Timeline';
 
 // Remove Unsplash API dependency for better privacy and performance
 interface HomeProps {
@@ -50,6 +51,7 @@ const Home: React.FC<HomeProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [featuredProject, setFeaturedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
   
   // Section references for scroll animations
   const bentoGridRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,7 @@ const Home: React.FC<HomeProps> = ({
   }, [skills]);
 
   useEffect(() => {
-    const fetchFeaturedProject = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         
@@ -83,14 +85,27 @@ const Home: React.FC<HomeProps> = ({
             ...featuredDoc.data() 
           } as Project);
         }
+
+        // Fetch experiences
+        const experiencesQuery = query(
+          collection(db, 'experiences'),
+          orderBy('order', 'desc')
+        );
+        const experiencesSnapshot = await getDocs(experiencesQuery);
+        const experiencesData = experiencesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Experience[];
+        setExperiences(experiencesData);
+
       } catch (error) {
-        console.error('Failed to fetch featured project:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchFeaturedProject();
+    fetchData();
   }, []);
 
   // Helper function to safely truncate HTML content
@@ -267,6 +282,27 @@ const Home: React.FC<HomeProps> = ({
               </div>
             </GlassCard>
           </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Experience Timeline Section */}
+      <div className="max-w-7xl mx-auto mt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <h2 className="text-3xl font-bold mb-8 text-white flex items-center">
+            <Briefcase className="mr-3 text-purple-400" size={28} />
+            <GradientText>Experience Timeline</GradientText>
+          </h2>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <Timeline experiences={experiences} />
+          )}
         </motion.div>
       </div>
 

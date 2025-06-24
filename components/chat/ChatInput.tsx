@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Sparkles, Mic, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
@@ -11,6 +11,7 @@ interface ChatInputProps {
   handleKeyDown: (e: React.KeyboardEvent) => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   autoResizeTextarea: () => void;
+  isMobile: boolean;
 }
 
 const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -22,12 +23,39 @@ export function ChatInput({
   handleSubmit,
   handleKeyDown,
   inputRef,
-  autoResizeTextarea
+  autoResizeTextarea,
+  isMobile
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
+  // Handle mobile keyboard visibility
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleResize = () => {
+      const isKeyboardVisible = window.visualViewport?.height !== window.innerHeight;
+      setKeyboardVisible(isKeyboardVisible);
+      
+      // Update input position when keyboard appears
+      if (isKeyboardVisible && inputRef.current) {
+        const viewportBottom = window.visualViewport?.height || window.innerHeight;
+        const inputBottom = inputRef.current.getBoundingClientRect().bottom;
+        if (inputBottom > viewportBottom) {
+          inputRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+  }, [isMobile, inputRef]);
+
   return (
-    <div className="border-t border-gray-800/50 p-4 bg-gray-900/90 backdrop-blur-md">
+    <div className={`
+      border-t border-gray-800/50 p-4 bg-gray-900/90 backdrop-blur-md
+      ${isMobile ? 'sticky bottom-0 pb-safe' : ''}
+    `}>
       <form onSubmit={handleSubmit} className="relative">
         <motion.div 
           className={`relative rounded-xl overflow-hidden border transition-all ${
@@ -52,8 +80,15 @@ export function ChatInput({
             onKeyDown={handleKeyDown}
             placeholder="Ask me anything..."
             rows={1}
-            className="w-full bg-gradient-to-b from-gray-800 to-gray-900 text-white rounded-xl pl-4 pr-24 py-3 focus:outline-none resize-none"
-            style={{ maxHeight: '120px' }}
+            className={`
+              w-full bg-gradient-to-b from-gray-800 to-gray-900 text-white rounded-xl pl-4 pr-24 py-3 
+              focus:outline-none resize-none
+              ${isMobile ? 'text-base' : 'text-sm'}
+            `}
+            style={{ 
+              maxHeight: isMobile ? '80px' : '120px',
+              minHeight: isMobile ? '50px' : '40px'
+            }}
             disabled={isLoading}
           />
           
@@ -95,14 +130,16 @@ export function ChatInput({
           </div>
         </motion.div>
         
-        <motion.p 
-          className="text-xs text-gray-400 mt-2 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          Powered by AI •  Enter to send
-        </motion.p>
+        {!isMobile && (
+          <motion.p 
+            className="text-xs text-gray-400 mt-2 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            Powered by AI • Enter to send
+          </motion.p>
+        )}
       </form>
     </div>
   );

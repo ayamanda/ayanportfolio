@@ -82,6 +82,7 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
     linkedin: profile.linkedinURL,
     instagram: profile.instagramURL,
     github: profile.githubURL,
+    upwork: profile.upworkURL,
     email: profile.email 
   };
 
