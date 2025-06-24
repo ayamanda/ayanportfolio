@@ -161,7 +161,15 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ editingProject, onProj
                         <p>Drag & drop project cover photo or click to select</p>
                     </div>
                     {coverPhoto && (
-                        <Image src={coverPhoto} alt="Cover" className="w-full h-40 object-cover rounded" />
+                        <div className="relative w-full h-40">
+                            <Image 
+                                src={coverPhoto} 
+                                alt="Cover" 
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                className="object-cover rounded" 
+                            />
+                        </div>
                     )}
                 </form>
             </CardContent>

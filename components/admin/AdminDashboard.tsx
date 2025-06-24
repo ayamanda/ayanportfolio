@@ -1,197 +1,166 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Briefcase, Code, MessageSquare, LogOut, Sun, Moon, Menu, ChevronRight, Bell } from 'lucide-react';
+import { User, Briefcase, Code2, MessageSquare, LogOut, Sun, Moon, Menu, ChevronRight, Bell, FolderGit2, MessagesSquare } from 'lucide-react';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { ProfileSection } from './ProfileSection';
-import { ProjectsSection } from './ProjectSection/ProjectsSection';
 import { SkillsSection } from './SkillsSection';
+import { ProjectsSection } from './ProjectSection/ProjectsSection';
 import { MessagesSection } from './MessagesSection';
 import { ConversationsSection } from './ConversationSection';
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
+import { ExperienceSection } from './ExperienceSection/ExperienceSection';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { name: 'Profile', icon: User },
-  { name: 'Projects', icon: Briefcase },
-  { name: 'Skills', icon: Code },
-  { name: 'Messages', icon: MessageSquare },
-  { name: 'Conversations', icon: MessageSquare },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'projects', label: 'Projects', icon: FolderGit2 },
+  { id: 'skills', label: 'Skills', icon: Code2 },
+  { id: 'experience', label: 'Experience', icon: Briefcase },
+  { id: 'messages', label: 'Messages', icon: MessageSquare },
+  { id: 'conversations', label: 'Conversations', icon: MessagesSquare },
 ];
 
-export const AdminDashboard: React.FC = () => {
+const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState('profile');
-  const { user, logout } = useFirebaseAuth();
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const { logout } = useFirebaseAuth();
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
 
   useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDarkMode(prefersDark);
+    // Check system preference
+    if (typeof window !== 'undefined') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(isDark ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', isDark);
+    }
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-  }, [isDarkMode]);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
-  const Sidebar = ({ isMobile = false }) => (
-    <motion.nav
-      className={`bg-white dark:bg-gray-800 ${isMobile ? 'w-full' : 'w-64'} h-full flex flex-col`}
-      initial={false}
-      animate={{ x: isSidebarVisible ? 0 : (isMobile ? '100%' : '-100%') }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-    >
-      <div className="p-4">
-        <div className="flex items-center space-x-2 mb-6">
-          <Avatar>
-            <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
-            <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-xl font-bold">{user?.displayName || 'Admin'}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Administrator</p>
-          </div>
-        </div>
-        <Separator className="my-4" />
-      </div>
-      <ScrollArea className="flex-grow">
-        <div className="px-3">
-          {navItems.map(({ name, icon: Icon }) => (
-            <motion.div key={name} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant={activeSection === name.toLowerCase() ? "secondary" : "ghost"}
-                className={`w-full justify-start mb-1 ${activeSection === name.toLowerCase() ? 'bg-primary/10 dark:bg-primary/20' : ''}`}
-                onClick={() => {
-                  setActiveSection(name.toLowerCase());
-                  if (isMobile) setIsMobileMenuOpen(false);
-                }}
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                {name}
-                {activeSection === name.toLowerCase() && (
-                  <ChevronRight className="ml-auto h-4 w-4" />
-                )}
-              </Button>
-            </motion.div>
-          ))}
-        </div>
-      </ScrollArea>
-      <div className="p-4">
-        <Separator className="my-4" />
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-medium">Dark Mode</span>
-          <Switch
-            checked={isDarkMode}
-            onCheckedChange={toggleDarkMode}
-            aria-label="Toggle dark mode"
-          />
-        </div>
-        <Button variant="destructive" onClick={handleLogout} className="w-full">
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
-      </div>
-    </motion.nav>
-  );
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
+      {/* Sidebar */}
+      <motion.aside
+        initial={isMobile ? { x: -300 } : false}
+        animate={isMobile ? { x: isMobileMenuOpen ? 0 : -300 } : false}
+        className={`fixed md:relative w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 ${
+          isMobile && !isMobileMenuOpen ? '-translate-x-full' : ''
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          <div className="p-4">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Admin Panel</h2>
+          </div>
 
-      {/* Mobile Menu */}
-      <div className="md:hidden">
-        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="fixed top-4 left-4 z-50">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64">
-            <Sidebar isMobile />
-          </SheetContent>
-        </Sheet>
-      </div>
+          <ScrollArea className="flex-grow">
+            <div className="px-3">
+              {navItems.map(({ id, label, icon: Icon }) => (
+                <motion.div key={id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant={activeSection === id ? "secondary" : "ghost"}
+                    className={`w-full justify-start mb-1 ${
+                      activeSection === id 
+                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' 
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => {
+                      setActiveSection(id);
+                      if (isMobile) setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {label}
+                    {activeSection === id && (
+                      <ChevronRight className="ml-auto h-4 w-4" />
+                    )}
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+          </ScrollArea>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)}
-            </h1>
-            <div className="flex items-center space-x-4">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleTheme}
+                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
                     <Bell className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>New message received</DropdownMenuItem>
-                  <DropdownMenuItem>Project update available</DropdownMenuItem>
-                  <DropdownMenuItem>Skill assessment completed</DropdownMenuItem>
+                <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <DropdownMenuItem className="text-gray-600 dark:text-gray-300">No new notifications</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleDarkMode}
-                className="rounded-full"
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={logout}
+                className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                <LogOut className="h-5 w-5" />
               </Button>
             </div>
           </div>
-        </header>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeSection}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                {activeSection === 'profile' && <ProfileSection />}
-                {activeSection === 'projects' && <ProjectsSection />}
-                {activeSection === 'skills' && <SkillsSection />}
-                {activeSection === 'messages' && <MessagesSection />}
-                {activeSection === 'conversations' && <ConversationsSection />} {/* Add this line */}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </main>
-      </div>
+        </div>
+      </motion.aside>
+
+      {/* Mobile menu button */}
+      {isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed bottom-4 right-4 z-50 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1 p-8 overflow-auto">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="w-full"
+          >
+            {activeSection === 'profile' && <ProfileSection />}
+            {activeSection === 'projects' && <ProjectsSection />}
+            {activeSection === 'skills' && <SkillsSection />}
+            {activeSection === 'messages' && <MessagesSection />}
+            {activeSection === 'conversations' && <ConversationsSection />}
+            {activeSection === 'experience' && <ExperienceSection />}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 };
+
+export default AdminDashboard;

@@ -87,9 +87,14 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project }) => {
             <Image
               src={project.coverPhoto || '/placeholder-image.jpg'}
               alt={project.name}
-              layout="fill"
-              objectFit="cover"
+              fill
+              className="object-cover"
               priority
+              onError={(e) => {
+                // Hide the image on error and show a fallback background
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent" />
           </div>

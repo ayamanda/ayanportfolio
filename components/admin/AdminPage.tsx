@@ -3,7 +3,7 @@
 import React from 'react';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { LoginForm } from '@/components/admin/LoginForm';
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import AdminDashboard from '@/components/admin/AdminDashboard';
 import Loader from '@/components/Loader';
 
 export default function AdminPage() {

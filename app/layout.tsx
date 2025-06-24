@@ -19,8 +19,11 @@ export const metadata: Metadata = {
     follow: true,
   },
   viewport: {
-    width: "device-width",
+    width: 'device-width',
     initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover'
   },
   openGraph: {
     type: "website",

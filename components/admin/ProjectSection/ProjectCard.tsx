@@ -35,7 +35,20 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         <Card className="bg-gray-800 text-white border-gray-700">
             <CardHeader>
                 {project.coverPhoto && (
-                    <Image src={project.coverPhoto} alt={project.name} className="w-full h-40 object-cover rounded-t-lg" />
+                    <div className="relative w-full h-40 bg-gray-700 rounded-t-lg">
+                        <Image 
+                            src={project.coverPhoto} 
+                            alt={project.name} 
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="object-cover rounded-t-lg"
+                            onError={(e) => {
+                                // Hide the image on error and show a fallback background
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                            }}
+                        />
+                    </div>
                 )}
                 <CardTitle className="flex items-center justify-between">
                     <span className="flex items-center space-x-2">
