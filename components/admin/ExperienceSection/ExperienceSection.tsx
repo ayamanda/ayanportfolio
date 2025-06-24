@@ -48,14 +48,15 @@ export const ExperienceSection = () => {
     }
   };
 
-  const handleUpdateExperience = async (experienceData: Experience) => {
+  const handleUpdateExperience = async (data: Omit<Experience, 'id'>) => {
+    if (!selectedExperience?.id) return;
+    
     try {
-      const { id, ...data } = experienceData;
       const dataToUpdate = {
         ...data,
         technologies: Array.isArray(data.technologies) ? data.technologies : [],
       };
-      await updateDoc(doc(db, 'experiences', id), dataToUpdate);
+      await updateDoc(doc(db, 'experiences', selectedExperience.id), dataToUpdate);
       await fetchExperiences();
       setIsDialogOpen(false);
       setSelectedExperience(null);
