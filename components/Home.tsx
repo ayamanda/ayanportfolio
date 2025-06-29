@@ -239,7 +239,7 @@ const Home: React.FC<HomeProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, ease: "easeOut" }}
           >
-            <span className="text-white">Hi, I'm </span>
+            <span className="text-white">Hi, I&apos;m </span>
             <GradientText className="inline-block">{name}</GradientText>
           </motion.h1>
         </motion.div>
