@@ -19,6 +19,8 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
   const [mode, setMode] = useState<'minimized' | 'open'>('minimized');
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string>('');
   const [sessionId, setSessionId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [showNameDialog, setShowNameDialog] = useState(false);
@@ -28,36 +30,48 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
   const { input, setInput, inputRef, autoResizeTextarea } = useChatInput(isMobile);
 
   const suggestedQuestions = [
-    "What kind of projects have you worked on?",
-    "What are your main skills?",
-    "Tell me about your experience",
-    "How can I contact you?"
+    "🚀 What are your most impressive projects?",
+    "💻 What technologies do you specialize in?",
+    "📈 Tell me about your professional experience",
+    "📞 How can I get in touch with you?",
+    "🎯 What type of work are you looking for?",
+    "⚡ What makes you stand out as a developer?"
   ];
 
   const systemPrompt = `
-  You are Hira, an AI assistant for ${profile.name}'s portfolio website. You are chatting with ${userName || 'a visitor'}. You are made by ${profile.name}. Here's the information about them:
+  You are Hira, an intelligent AI assistant for ${profile.name}'s portfolio website. You are chatting with ${userName || 'a visitor'}. You represent ${profile.name} professionally and helpfully.
 
+  ABOUT ${profile.name.toUpperCase()}:
   Name: ${profile.name}
   Title: ${profile.title || 'Developer'}
   About: ${profile.about}
 
-  Skills: ${skills.map(skill => skill.name).join(', ')}
+  TECHNICAL SKILLS:
+  ${skills.map(skill => `• ${skill.name}`).join('\n')}
 
-  Contact: email- ${profile.email || 'ayanmandal059@gmail.com'}, phone- ${profile.phone || '+91 8927081490'}
+  CONTACT INFORMATION:
+  Email: ${profile.email || 'ayanmandal059@gmail.com'}
+  Phone: ${profile.phone || '+91 8927081490'}
 
-  Projects: ${projects.map(project => `
-  - ${project.name}: ${project.description}
-    ${project.tags ? `Tags: ${project.tags.join(', ')}` : ''}
-    ${project.link ? `Link: ${project.link}` : ''}
+  FEATURED PROJECTS:
+  ${projects.map(project => `
+  📁 ${project.name}
+     Description: ${project.description}
+     ${project.tags ? `Technologies: ${project.tags.join(', ')}` : ''}
+     ${project.link ? `Live Demo: ${project.link}` : ''}
   `).join('\n')}
 
-  Important Guidelines:
-  1. Address the user by their name (${userName}) when appropriate
-  2. Keep responses concise, friendly, and professional
-  3. When discussing projects or skills, provide specific examples from the portfolio
-  4. If asked about topics not related to ${profile.name} or their work, politely decline to comment
-  5. Use personal details to provide more contextual and relevant responses
-  6. Only give contact information if asked about it
+  CONVERSATION GUIDELINES:
+  1. Be warm, professional, and engaging
+  2. Address users by name (${userName}) when appropriate
+  3. Provide specific examples from the portfolio when discussing projects or skills
+  4. Keep responses concise but informative (2-3 sentences max unless asked for details)
+  5. Use emojis sparingly but effectively to enhance communication
+  6. If asked about unrelated topics, politely redirect to ${profile.name}'s work
+  7. Only share contact information when specifically requested
+  8. Encourage users to explore the portfolio and reach out for opportunities
+  9. Be enthusiastic about ${profile.name}'s work and achievements
+  10. Offer to provide more details about any specific project or skill mentioned
   `;
 
   // Load messages from localStorage on mount
@@ -153,7 +167,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     if (e) e.preventDefault();
     
     const userMessage = input.trim();
-    if (!userMessage || isLoading) return;
+    if (!userMessage || isLoading || isStreaming) return;
 
     setInput('');
     setIsLoading(true);
@@ -177,6 +191,20 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
       await saveMessageToFirebase(newUserMessage, chatSessionId);
     }
 
+    // Create placeholder message for streaming
+    const assistantMessageId = uuidv4();
+    const placeholderMessage: MessageType = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now()
+    };
+
+    setMessages(prev => [...prev, placeholderMessage]);
+    setStreamingMessageId(assistantMessageId);
+    setIsLoading(false);
+    setIsStreaming(true);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -185,37 +213,90 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
           messages: [
             { role: 'system', content: systemPrompt },
             ...updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          ]
+          ],
+          stream: true
         }),
       });
 
-      if (!response.ok) throw new Error((await response.json()).error || 'Failed to get response');
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
 
-      const data = await response.json();
-      if (!data.message) throw new Error('Invalid response format');
+      if (!response.body) {
+        throw new Error('No response body');
+      }
 
-      const newAssistantMessage: MessageType = {
-        id: uuidv4(),
-        role: 'assistant',
-        content: data.message,
-        timestamp: Date.now()
-      };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
 
-      setMessages(prev => [...prev, newAssistantMessage]);
-      if (!useLocalStorage) {
-        await saveMessageToFirebase(newAssistantMessage, chatSessionId);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'content') {
+                  accumulatedContent += data.content;
+                  
+                  // Update the streaming message
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId 
+                      ? { ...msg, content: accumulatedContent }
+                      : msg
+                  ));
+                } else if (data.type === 'done') {
+                  // Streaming complete
+                  break;
+                } else if (data.type === 'error') {
+                  throw new Error(data.error);
+                }
+              } catch (parseError) {
+                // Skip invalid JSON lines
+                continue;
+              }
+            }
+          }
+        }
+
+        // Save final message to Firebase
+        if (!useLocalStorage && accumulatedContent) {
+          const finalMessage: MessageType = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: accumulatedContent,
+            timestamp: Date.now()
+          };
+          await saveMessageToFirebase(finalMessage, chatSessionId);
+        }
+
+      } finally {
+        reader.releaseLock();
       }
 
     } catch (error) {
-      const errorMessage: MessageType = { 
-        id: uuidv4(),
-        role: 'assistant', 
-        content: `Sorry, I encountered an error. Please try again.`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.error('Streaming error:', error);
+      
+      // Replace placeholder with error message
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { 
+              ...msg, 
+              content: 'Sorry, I encountered an error while processing your request. Please try again.' 
+            }
+          : msg
+      ));
     } finally {
-      setIsLoading(false);
+      setIsStreaming(false);
+      setStreamingMessageId('');
     }
   };
 
@@ -235,7 +316,7 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
     const welcomeMessage: MessageType = {
       id: uuidv4(),
       role: 'assistant',
-      content: `👋 Hi ${name}! I'm Hira, your AI assistant. How can I help you learn more about Ayan and his works?`,
+      content: `👋 Hi ${name}! I'm Hira, ${profile.name}'s AI assistant. I'm here to help you explore ${profile.name}'s portfolio, learn about their projects, and answer any questions you might have. What would you like to know?`,
       timestamp: Date.now(),
     };
     
@@ -310,6 +391,8 @@ export default function Chatbot({ profile, projects, skills, userEmail }: Chatbo
           height={isMobile ? window.innerHeight : 600}
           messages={messages}
           isLoading={isLoading}
+          isStreaming={isStreaming}
+          streamingMessageId={streamingMessageId}
           input={input}
           setInput={setInput}
           handleSubmit={handleSubmit}

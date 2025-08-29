@@ -53,8 +53,9 @@ export function ChatInput({
 
   return (
     <div className={`
-      border-t border-gray-800/50 p-4 bg-gray-900/90 backdrop-blur-md
-      ${isMobile ? 'sticky bottom-0 pb-safe' : ''}
+      border-t border-gray-800/50 p-4 bg-gray-900/95 backdrop-blur-md
+      ${isMobile ? 'sticky bottom-0 pb-safe-bottom' : ''}
+      ${keyboardVisible && isMobile ? 'pb-2' : ''}
     `}>
       <form onSubmit={handleSubmit} className="relative">
         <motion.div 

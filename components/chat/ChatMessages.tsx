@@ -10,12 +10,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface ChatMessagesProps {
   messages: Message[];
   isLoading: boolean;
+  isStreaming?: boolean;
+  streamingMessageId?: string;
   toggleFeedback: (messageId: string, isHelpful: boolean) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   isMobile: boolean;
 }
 
-export function ChatMessages({ messages, isLoading, toggleFeedback, messagesEndRef, isMobile }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, isStreaming = false, streamingMessageId = '', toggleFeedback, messagesEndRef, isMobile }: ChatMessagesProps) {
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
 
   const messageVariants = {
@@ -116,6 +118,18 @@ export function ChatMessages({ messages, isLoading, toggleFeedback, messagesEndR
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {message.content}
                         </ReactMarkdown>
+                        {/* Streaming cursor */}
+                        {isStreaming && streamingMessageId === message.id && (
+                          <motion.span
+                            className="inline-block w-2 h-4 bg-violet-500 ml-1"
+                            animate={{ opacity: [1, 0, 1] }}
+                            transition={{ 
+                              duration: 1, 
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        )}
                       </div>
                     </motion.div>
                   </div>
@@ -181,7 +195,7 @@ export function ChatMessages({ messages, isLoading, toggleFeedback, messagesEndR
             ))}
           </AnimatePresence>
           
-          {isLoading && (
+          {isLoading && !isStreaming && (
             <motion.div 
               className="flex justify-start"
               initial={{ opacity: 0, y: 10 }}
@@ -223,6 +237,51 @@ export function ChatMessages({ messages, isLoading, toggleFeedback, messagesEndR
                     initial="initial"
                     animate="animate"
                   />
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+          
+          {isStreaming && (
+            <motion.div 
+              className="flex justify-start"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className={`
+                bg-gradient-to-r from-gray-800 to-gray-900 p-4 rounded-xl 
+                flex items-center gap-3 border border-violet-500/20 
+                shadow-lg shadow-violet-500/10
+                ${isMobile ? 'p-3 text-sm' : 'p-4'}
+              `}>
+                <motion.div 
+                  className="flex-shrink-0 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 
+                             flex items-center justify-center shadow-lg shadow-violet-500/20
+                             w-6 h-6"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  <Sparkles className="w-3 h-3 text-white" />
+                </motion.div>
+                <span className="text-gray-300 text-sm">Hira is typing...</span>
+                <motion.div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="w-1 h-1 bg-violet-500 rounded-full"
+                      animate={{ 
+                        scale: [1, 1.5, 1],
+                        opacity: [0.5, 1, 0.5]
+                      }}
+                      transition={{ 
+                        repeat: Infinity, 
+                        duration: 1, 
+                        delay: i * 0.2,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  ))}
                 </motion.div>
               </div>
             </motion.div>

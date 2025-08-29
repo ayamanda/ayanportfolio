@@ -1,7 +1,7 @@
 // app/api/chat/route.ts
 export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
-import { Groq } from 'groq-sdk';
+import { GoogleGenAI } from '@google/genai';
 
 // Define response and error types for better type safety
 type ChatResponse = {
@@ -14,24 +14,18 @@ type ChatResponse = {
   };
 };
 
-type ErrorResponse = {
-  error: string;
-  code?: string;
-  details?: any;
-};
-
 // Environment validation
 const validateEnv = () => {
-  if (!process.env.GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY is not configured in environment variables');
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured in environment variables');
   }
 };
 
-// Initialize Groq client with validation
-const getGroqClient = () => {
+// Initialize Gemini client with validation
+const getGeminiClient = () => {
   validateEnv();
-  return new Groq({
-    apiKey: process.env.GROQ_API_KEY
+  return new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY
   });
 };
 
@@ -64,9 +58,9 @@ const validateRequest = (body: any) => {
 // Model selection with fallback
 const getModelName = (requestedModel?: string) => {
   const availableModels = {
-    default: "llama-3.3-70b-versatile",
-    fast: "llama-3.3-8b-instant",
-    premium: "llama-3.3-70b-versatile"
+    default: "gemini-2.0-flash-exp",
+    fast: "gemini-2.0-flash-exp", 
+    premium: "gemini-1.5-pro"
   };
   
   if (requestedModel && Object.values(availableModels).includes(requestedModel)) {
@@ -99,55 +93,120 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // Initialize Groq client
-    const groq = getGroqClient();
+    // Initialize Gemini client
+    const genai = getGeminiClient();
     
     // Get model name with fallback
     const modelName = getModelName(body.model);
     
+    // Convert messages to Gemini format
+    const contents = body.messages
+      .filter((msg: any) => msg.role !== 'system')
+      .map((msg: any) => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+
+    // Extract system instruction
+    const systemInstruction = body.messages.find((msg: any) => msg.role === 'system')?.content;
+    
     // Default parameters with overrides from request
-    const params = {
-      messages: body.messages,
-      model: modelName,
+    const config = {
       temperature: body.temperature ?? 0.7,
-      max_tokens: body.max_tokens ?? 1024,
-      top_p: body.top_p ?? 1,
-      stream: body.stream ?? false,
-      stop: body.stop ?? null
+      maxOutputTokens: body.max_tokens ?? 1024,
+      topP: body.top_p ?? 1,
+      systemInstruction: systemInstruction || undefined,
+      // Disable thinking for faster responses
+      thinkingConfig: {
+        thinkingBudget: 0
+      }
     };
-    
-    // Execute completion with timeout
-    const completionPromise = groq.chat.completions.create(params);
-    
-    // Optional timeout handling
-    const timeoutMs = body.timeout_ms ?? 30000; // 30 second default timeout
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
-    });
-    
-    // Race the completion against the timeout
-    const completion = await Promise.race([
-      completionPromise,
-      timeoutPromise
-    ]) as Awaited<typeof completionPromise>;
-    
-    // Validate response
-    if (!completion?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid or empty response from Groq API');
+
+    // Check if streaming is requested
+    const isStreaming = body.stream === true;
+
+    if (isStreaming) {
+      // Handle streaming response
+      const stream = await genai.models.generateContentStream({
+        model: modelName,
+        contents: contents,
+        config: config
+      });
+
+      // Create a ReadableStream for Server-Sent Events
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of stream) {
+              if (chunk.text) {
+                const data = JSON.stringify({
+                  type: 'content',
+                  content: chunk.text,
+                  model: modelName
+                });
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              }
+            }
+            
+            // Send completion signal
+            const doneData = JSON.stringify({
+              type: 'done',
+              model: modelName
+            });
+            controller.enqueue(encoder.encode(`data: ${doneData}\n\n`));
+            controller.close();
+          } catch (error) {
+            const errorData = JSON.stringify({
+              type: 'error',
+              error: error instanceof Error ? error.message : 'Stream error occurred'
+            });
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+            controller.close();
+          }
+        }
+      });
+
+      return new Response(readable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    } else {
+      // Handle non-streaming response (existing logic)
+      const completionPromise = genai.models.generateContent({
+        model: modelName,
+        contents: contents,
+        config: config
+      });
+      
+      // Optional timeout handling
+      const timeoutMs = body.timeout_ms ?? 30000; // 30 second default timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
+      });
+      
+      // Race the completion against the timeout
+      const completion = await Promise.race([
+        completionPromise,
+        timeoutPromise
+      ]) as Awaited<typeof completionPromise>;
+      
+      // Validate response
+      if (!completion?.text) {
+        throw new Error('Invalid or empty response from Gemini API');
+      }
+      
+      // Construct the response
+      const response: ChatResponse = {
+        message: completion.text,
+        model: modelName
+      };
+      
+      return NextResponse.json(response);
     }
-    
-    // Construct the response
-    const response: ChatResponse = {
-      message: completion.choices[0].message.content,
-      model: completion.model,
-      usage: completion.usage ? {
-        promptTokens: completion.usage.prompt_tokens,
-        completionTokens: completion.usage.completion_tokens,
-        totalTokens: completion.usage.total_tokens
-      } : undefined
-    };
-    
-    return NextResponse.json(response);
     
   } catch (error) {
     console.error('Chat API Error:', error);
@@ -161,7 +220,7 @@ export async function POST(req: NextRequest) {
         }, { status: 504 });
       }
       
-      if (error.message.includes('GROQ_API_KEY')) {
+      if (error.message.includes('GEMINI_API_KEY')) {
         return NextResponse.json({
           error: 'API configuration error',
           code: 'CONFIG_ERROR'

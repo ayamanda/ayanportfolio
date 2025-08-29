@@ -10,6 +10,8 @@ interface ChatWindowProps {
   height: number;
   messages: MessageType[];
   isLoading: boolean;
+  isStreaming?: boolean;
+  streamingMessageId?: string;
   input: string;
   setInput: (value: string) => void;
   handleSubmit: (e?: React.FormEvent) => Promise<void>;
@@ -28,6 +30,8 @@ export const ChatWindow = ({
   height,
   messages,
   isLoading,
+  isStreaming = false,
+  streamingMessageId = '',
   input,
   setInput,
   handleSubmit,
@@ -53,39 +57,56 @@ export const ChatWindow = ({
 
   return (
     <AnimatePresence>
-      {/* Backdrop overlay for mobile */}
-      {isMobile && (
+      {/* Desktop overlay backdrop */}
+      {!isMobile && (
         <motion.div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onClick={() => {
+            endChatSession();
+            setMode('minimized');
+          }}
         />
       )}
-      
-      <motion.div 
+
+      <motion.div
         className={`
           fixed z-50 flex flex-col
-          ${isMobile 
-            ? 'inset-x-0 bottom-0 top-0 h-[100dvh]' 
-            : 'bottom-6 right-6 w-96 rounded-2xl shadow-xl border border-gray-700'
+          ${isMobile
+            ? 'inset-0 h-[100dvh] w-full'
+            : 'bottom-6 right-6 w-96 rounded-2xl shadow-2xl border border-gray-700/50'
           }
           bg-gradient-to-b from-gray-900 to-gray-950
+          ${isMobile ? 'bg-gray-900' : ''}
         `}
         style={!isMobile ? { height: `${height}px` } : undefined}
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
+        initial={isMobile
+          ? { opacity: 0, y: '100%' }
+          : { opacity: 0, y: 20, scale: 0.95 }
+        }
+        animate={isMobile
+          ? { opacity: 1, y: 0 }
+          : { opacity: 1, y: 0, scale: 1 }
+        }
+        exit={isMobile
+          ? { opacity: 0, y: '100%' }
+          : { opacity: 0, y: 20, scale: 0.95 }
+        }
+        transition={{
+          duration: isMobile ? 0.4 : 0.3,
+          ease: isMobile ? [0.25, 0.46, 0.45, 0.94] : "easeOut"
+        }}
       >
         {/* Sticky Header */}
-        <motion.div 
+        <motion.div
           className={`
             sticky top-0 z-10
             flex items-center justify-between p-4
             bg-gradient-to-r from-indigo-800 to-purple-800
-            border-b border-gray-800
-            ${isMobile ? 'shadow-lg' : ''}
+            border-b border-gray-800/50
+            ${isMobile ? 'shadow-lg pt-safe-top' : ''}
             ${isMobile ? 'rounded-none' : 'rounded-t-2xl'}
           `}
           initial={false}
@@ -96,14 +117,14 @@ export const ChatWindow = ({
           }}
         >
           <div className="flex items-center gap-3">
-            <motion.div 
+            <motion.div
               className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <Sparkles className="w-4 h-4 text-white" />
             </motion.div>
-            <motion.h3 
+            <motion.h3
               className="font-medium text-lg bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text"
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -127,9 +148,11 @@ export const ChatWindow = ({
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-hidden relative">
           <div className="absolute inset-0">
-            <ChatMessages 
-              messages={messages} 
-              isLoading={isLoading} 
+            <ChatMessages
+              messages={messages}
+              isLoading={isLoading}
+              isStreaming={isStreaming}
+              streamingMessageId={streamingMessageId}
               toggleFeedback={toggleFeedback}
               messagesEndRef={messagesEndRef}
               isMobile={isMobile}
@@ -156,10 +179,10 @@ export const ChatWindow = ({
             ${isMobile ? 'shadow-lg' : ''}
           `}
         >
-          <ChatInput 
+          <ChatInput
             input={input}
             setInput={setInput}
-            isLoading={isLoading}
+            isLoading={isLoading || isStreaming}
             handleSubmit={handleSubmit}
             handleKeyDown={handleKeyDown}
             inputRef={inputRef}

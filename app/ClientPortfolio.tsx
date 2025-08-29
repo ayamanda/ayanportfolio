@@ -8,6 +8,8 @@ import Home from '@/components/Home';
 import Projects from '@/components/Projects';
 import Contact from '@/components/Contact';
 import Chatbot from '@/components/Chatbot';
+import SectionTransition from '@/components/SectionTransition';
+import { useSectionTransition, SectionName } from '@/hooks/useSectionTransition';
 import { motion, useScroll, useSpring, useMotionValue, useTransform } from 'framer-motion';
 
 const Loader = dynamic(() => import('../components/Loader'), { ssr: false });
@@ -19,11 +21,13 @@ interface ClientPortfolioProps {
 }
 
 const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, skills }) => {
-  const [activeSection, setActiveSection] = useState('home');
   const [loading, setLoading] = useState(true);
   const [isNavSticky, setIsNavSticky] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
+  
+  // Use the section transition hook
+  const { sectionState, setActiveSection, setSectionLoading, isCurrentSectionLoading } = useSectionTransition('home', 600);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -168,16 +172,18 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
             animate={{ y: 0 }}
             transition={{ type: 'spring', stiffness: 120, damping: 20 }}
           >
-            <Navbar activeSection={activeSection} setActiveSection={setActiveSection} isSticky={isNavSticky} />
+            <Navbar activeSection={sectionState.activeSection} setActiveSection={setActiveSection} isSticky={isNavSticky} />
           </motion.div>
           
           <main className={`${isNavSticky ? 'pt-16' : ''}`}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+            <SectionTransition
+              activeSection={sectionState.activeSection}
+              animationType="fade"
+              transitionDuration={0.6}
+              isLoading={isCurrentSectionLoading}
+              className="min-h-screen"
             >
-              {activeSection === 'home' && (
+              {sectionState.activeSection === 'home' && (
                 <Home 
                   name={profile.name}
                   about={profile.about}
@@ -188,14 +194,14 @@ const ClientPortfolio: React.FC<ClientPortfolioProps> = ({ profile, projects, sk
                 />
               )}
               
-              {activeSection === 'projects' && (
+              {sectionState.activeSection === 'projects' && (
                 <Projects projects={projects} />
               )}
               
-              {activeSection === 'contact' && (
+              {sectionState.activeSection === 'contact' && (
                 <Contact />
               )}
-            </motion.div>
+            </SectionTransition>
           </main>
 
           <motion.footer 
