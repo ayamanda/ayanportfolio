@@ -58,9 +58,9 @@ const validateRequest = (body: any) => {
 // Model selection with fallback
 const getModelName = (requestedModel?: string) => {
   const availableModels = {
-    default: "gemini-2.0-flash-exp",
-    fast: "gemini-2.0-flash-exp", 
-    premium: "gemini-1.5-pro"
+    default: "gemini-3-flash-preview",
+    fast: "gemini-3.1-flash-lite-preview", 
+    premium: "gemini-3.1-pro-preview"
   };
   
   if (requestedModel && Object.values(availableModels).includes(requestedModel)) {

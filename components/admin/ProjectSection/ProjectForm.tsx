@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useDropzone } from 'react-dropzone';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/firebase';
+import { db } from '@/firebase';
+import { uploadAsset } from '@/lib/cloudinary-client';
 import { Project } from '@/types';
 import { toast } from 'react-toastify';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,13 +96,15 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ editingProject, onProj
 
     const onDrop = async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
-        const storageRef = ref(storage, `projects/${file.name}`);
+
+        if (!file) {
+            return;
+        }
 
         try {
             setUploading(true);
-            await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
-            setValue('coverPhoto', downloadURL);
+            const uploadedAsset = await uploadAsset(file, 'projects');
+            setValue('coverPhoto', uploadedAsset.url);
             toast.success('File uploaded successfully!');
         } catch (error) {
             toast.error('Failed to upload project cover photo. Please try again.');
@@ -112,7 +114,13 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ editingProject, onProj
         }
     };
 
-    const { getRootProps, getInputProps } = useDropzone({ onDrop });
+    const { getRootProps, getInputProps } = useDropzone({
+        accept: {
+            'image/*': [],
+        },
+        maxFiles: 1,
+        onDrop,
+    });
 
     const clearForm = () => {
         reset({

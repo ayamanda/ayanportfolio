@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Upload, Check } from 'lucide-react';
 import Image from 'next/image';
 import { useDropzone } from 'react-dropzone';
-import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
-import { storage } from '@/firebase';
+import { deleteAsset, listAssets, uploadAsset, type CloudinaryAsset } from '@/lib/cloudinary-client';
 import { toast } from 'react-toastify';
 
 interface PhotoGalleryProps {
@@ -14,7 +13,7 @@ interface PhotoGalleryProps {
 }
 
 export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, currentPhotoURL }) => {
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<CloudinaryAsset[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -26,11 +25,8 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
 
   const fetchPhotos = async () => {
     try {
-      const listRef = ref(storage, 'profile');
-      const res = await listAll(listRef);
-      const urlPromises = res.items.map(itemRef => getDownloadURL(itemRef));
-      const urls = await Promise.all(urlPromises);
-      setPhotos(urls);
+      const assets = await listAssets('profile');
+      setPhotos(assets);
     } catch (error) {
       console.error('Failed to fetch photos:', error);
       toast.error('Failed to load photos. Please try again.');
@@ -39,13 +35,15 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
 
   const onDrop = async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    const storageRef = ref(storage, `profile/${file.name}`);
+
+    if (!file) {
+      return;
+    }
 
     try {
       setUploading(true);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      setPhotos(prev => [...prev, downloadURL]);
+      const uploadedAsset = await uploadAsset(file, 'profile');
+      setPhotos(prev => [uploadedAsset, ...prev]);
       toast.success('Photo uploaded successfully!');
     } catch (error) {
       toast.error('Failed to upload photo. Please try again.');
@@ -55,15 +53,20 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
     }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      'image/*': [],
+    },
+    maxFiles: 1,
+    onDrop,
+  });
 
-  const handlePhotoDelete = async (url: string) => {
+  const handlePhotoDelete = async (photo: CloudinaryAsset) => {
     try {
-      const fileRef = ref(storage, url);
-      await deleteObject(fileRef);
-      setPhotos(prev => prev.filter(photo => photo !== url));
+      await deleteAsset(photo.publicId);
+      setPhotos(prev => prev.filter(item => item.publicId !== photo.publicId));
       toast.success('Photo deleted successfully!');
-      if (url === currentPhotoURL) {
+      if (photo.url === currentPhotoURL) {
         onPhotoSelect('');
       }
     } catch (error) {
@@ -81,9 +84,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
         <DialogTitle className="text-2xl font-bold mb-4">Photo Gallery</DialogTitle>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {photos.map((photo, index) => (
-            <div key={index} className="relative group">
+            <div key={photo.publicId} className="relative group">
               <Image
-                src={photo}
+                src={photo.url}
                 alt={`Profile photo ${index + 1}`}
                 width={400}
                 height={128}
@@ -102,15 +105,15 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
                   variant="secondary"
                   size="icon"
                   onClick={() => {
-                    onPhotoSelect(photo);
+                    onPhotoSelect(photo.url);
                     setIsOpen(false);
                   }}
-                  disabled={photo === currentPhotoURL}
+                  disabled={photo.url === currentPhotoURL}
                 >
                   <Check className="h-4 w-4" />
                 </Button>
               </div>
-              {photo === currentPhotoURL && (
+              {photo.url === currentPhotoURL && (
                 <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
                   Current
                 </div>
@@ -120,8 +123,14 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ onPhotoSelect, curre
           <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-center cursor-pointer">
             <input {...getInputProps()} />
             <div className="text-center">
-              <Upload className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-1 text-sm text-gray-600">Click or drag to upload</p>
+              {uploading ? (
+                <p className="mt-1 text-sm text-gray-600">Uploading...</p>
+              ) : (
+                <>
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-1 text-sm text-gray-600">Click or drag to upload</p>
+                </>
+              )}
             </div>
           </div>
         </div>
